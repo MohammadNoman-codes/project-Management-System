@@ -1,81 +1,72 @@
-import React, { useState } from 'react';
-import BudgetSummary from './BudgetSummary';
-import ExpenseTracker from './ExpenseTracker';
-import BudgetApproval from './BudgetApproval';
-import FinancialReports from './FinancialReports';
+import React, { useState, useEffect } from 'react';
+import BudgetSummary from './budget/BudgetSummary';
+import ExpenseTracker from './budget/ExpenseTracker';
+import BudgetApproval from './budget/BudgetApproval';
+import FinancialReports from './budget/FinancialReports';
 
-function ProjectBudget({ project, onUpdateProject }) {
+function ProjectBudget({ 
+  project, 
+  onUpdateProject, 
+  onAddExpense, 
+  onApproveExpense, 
+  onRejectExpense, 
+  onApproveBudgetChange,
+  purpleColors 
+}) {
   const [activeTab, setActiveTab] = useState('summary');
   const [expenseFilters, setExpenseFilters] = useState({
-    category: 'all',
-    dateRange: 'all',
-    status: 'all'
+    category: '',
+    dateFrom: '',
+    dateTo: '',
+    status: ''
   });
 
-  // Handle adding a new expense
-  const handleAddExpense = (newExpense) => {
-    const updatedExpenses = [...project.budget.expenses, newExpense];
-    const totalExpenses = updatedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    
-    const updatedProject = {
-      ...project,
-      budget: {
-        ...project.budget,
-        actual: totalExpenses,
-        expenses: updatedExpenses
-      }
-    };
-    
-    onUpdateProject(updatedProject);
-  };
-
-  // Handle approving an expense
-  const handleApproveExpense = (expenseId) => {
-    const updatedExpenses = project.budget.expenses.map(expense => 
-      expense.id === expenseId ? { ...expense, status: 'Approved' } : expense
-    );
-    
-    const updatedProject = {
-      ...project,
-      budget: {
-        ...project.budget,
-        expenses: updatedExpenses
-      }
-    };
-    
-    onUpdateProject(updatedProject);
-  };
-
-  // Handle rejecting an expense
-  const handleRejectExpense = (expenseId) => {
-    const updatedExpenses = project.budget.expenses.map(expense => 
-      expense.id === expenseId ? { ...expense, status: 'Rejected' } : expense
-    );
-    
-    // Also adjust the actual amount if we're rejecting an expense
-    const rejectedExpense = project.budget.expenses.find(e => e.id === expenseId);
-    let actualAdjustment = 0;
-    
-    if (rejectedExpense && rejectedExpense.status === 'Approved') {
-      actualAdjustment = rejectedExpense.amount;
+  // Function to handle adding an expense with database integration
+  const handleAddExpense = async (expenseData) => {
+    try {
+      // Call the parent component's handler which will update the database
+      const newExpense = await onAddExpense(expenseData);
+      
+      // No need to manually update the state as the parent component will do it
+      return newExpense;
+    } catch (error) {
+      console.error('Error in handleAddExpense:', error);
+      alert('Failed to add expense. Please try again.');
+      throw error;
     }
-    
-    const updatedProject = {
-      ...project,
-      budget: {
-        ...project.budget,
-        actual: project.budget.actual - actualAdjustment,
-        expenses: updatedExpenses
-      }
-    };
-    
-    onUpdateProject(updatedProject);
   };
 
-  // Handle approving a budget change request
-  const handleApproveBudgetChange = (changeId) => {
-    // Implementation would depend on how budget changes are structured
-    alert(`Budget change ${changeId} would be approved in a real app`);
+  // Function to handle approving an expense with database integration
+  const handleApproveExpense = async (expenseId) => {
+    try {
+      // Call the parent component's handler which will update the database
+      await onApproveExpense(expenseId);
+    } catch (error) {
+      console.error('Error in handleApproveExpense:', error);
+      alert('Failed to approve expense. Please try again.');
+    }
+  };
+
+  // Function to handle rejecting an expense with database integration
+  const handleRejectExpense = async (expenseId) => {
+    try {
+      // Call the parent component's handler which will update the database
+      await onRejectExpense(expenseId);
+    } catch (error) {
+      console.error('Error in handleRejectExpense:', error);
+      alert('Failed to reject expense. Please try again.');
+    }
+  };
+
+  // Function to handle approving a budget change with database integration
+  const handleApproveBudgetChange = async (budgetChangeId) => {
+    try {
+      // Call the parent component's handler which will update the database
+      await onApproveBudgetChange(budgetChangeId);
+    } catch (error) {
+      console.error('Error in handleApproveBudgetChange:', error);
+      alert('Failed to approve budget change. Please try again.');
+    }
   };
 
   return (
@@ -85,40 +76,61 @@ function ProjectBudget({ project, onUpdateProject }) {
           <button 
             className={`nav-link ${activeTab === 'summary' ? 'active' : ''}`}
             onClick={() => setActiveTab('summary')}
+            style={activeTab === 'summary' ? {
+              borderBottomColor: purpleColors.primary,
+              color: purpleColors.primary,
+              fontWeight: '500'
+            } : {}}
           >
-            <i className="bi bi-pie-chart me-1"></i> Budget Overview
+            <i className="bi bi-pie-chart me-1"></i> Summary
           </button>
         </li>
         <li className="nav-item">
           <button 
             className={`nav-link ${activeTab === 'expenses' ? 'active' : ''}`}
             onClick={() => setActiveTab('expenses')}
+            style={activeTab === 'expenses' ? {
+              borderBottomColor: purpleColors.primary,
+              color: purpleColors.primary,
+              fontWeight: '500'
+            } : {}}
           >
-            <i className="bi bi-cash-coin me-1"></i> Expense Tracking
+            <i className="bi bi-receipt me-1"></i> Expenses
           </button>
         </li>
         <li className="nav-item">
           <button 
             className={`nav-link ${activeTab === 'approvals' ? 'active' : ''}`}
             onClick={() => setActiveTab('approvals')}
+            style={activeTab === 'approvals' ? {
+              borderBottomColor: purpleColors.primary,
+              color: purpleColors.primary,
+              fontWeight: '500'
+            } : {}}
           >
-            <i className="bi bi-check-circle me-1"></i> Approvals
+            <i className="bi bi-check-square me-1"></i> Approvals
           </button>
         </li>
-        {/* <li className="nav-item">
+        <li className="nav-item">
           <button 
             className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => setActiveTab('reports')}
+            style={activeTab === 'reports' ? {
+              borderBottomColor: purpleColors.primary,
+              color: purpleColors.primary,
+              fontWeight: '500'
+            } : {}}
           >
             <i className="bi bi-file-earmark-bar-graph me-1"></i> Reports
           </button>
-        </li> */}
+        </li>
       </ul>
-
+      
       {activeTab === 'summary' && (
         <BudgetSummary 
           budget={project.budget}
           currency={project.budget.currency}
+          purpleColors={purpleColors}
           onShowDetails={() => setActiveTab('expenses')}
         />
       )}
@@ -129,6 +141,7 @@ function ProjectBudget({ project, onUpdateProject }) {
           currency={project.budget.currency}
           onAddExpense={handleAddExpense}
           onFiltersChange={setExpenseFilters}
+          purpleColors={purpleColors}
         />
       )}
 
@@ -139,12 +152,14 @@ function ProjectBudget({ project, onUpdateProject }) {
           onApproveExpense={handleApproveExpense}
           onRejectExpense={handleRejectExpense}
           onApproveBudgetChange={handleApproveBudgetChange}
+          purpleColors={purpleColors}
         />
       )}
 
       {activeTab === 'reports' && (
         <FinancialReports 
           project={project}
+          purpleColors={purpleColors}
         />
       )}
     </div>

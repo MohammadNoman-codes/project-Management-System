@@ -1,0 +1,49 @@
+/* Custom styles for Frappe Gantt */
+.gantt .bar-wrapper {
+  cursor: pointer;
+}
+
+.gantt .bar {
+  fill: #3498db;
+}
+
+.gantt .bar-progress {
+  fill: #2ecc71;
+}
+
+.gantt .milestone .bar {
+  fill: #9b59b6;
+}
+
+.gantt .critical-path .bar {
+  fill: #e74c3c;
+}
+
+.gantt .today-highlight {
+  fill: rgba(255, 0, 0, 0.1);
+}
+
+/* Custom popup styles */
+.gantt-container .popup-wrapper {
+  background: white;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  max-width: 300px;
+}
+
+.gantt-container .popup-wrapper h5 {
+  margin-top: 0;
+  font-size: 16px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.gantt-container .popup-wrapper .row {
+  margin-bottom: 5px;
+}
+
+.gantt-container .popup-wrapper .row label {
+  font-weight: bold;
+  margin-right: 5px;
+}

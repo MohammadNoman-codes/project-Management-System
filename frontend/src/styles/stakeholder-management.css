@@ -1,0 +1,87 @@
+/* Stakeholder matrix styling */
+.stakeholder-matrix .rotate-270 {
+  transform: rotate(270deg);
+  white-space: nowrap;
+  position: absolute;
+  left: -25px;
+  top: 50%;
+}
+
+.stakeholder-card {
+  transition: all 0.2s ease;
+}
+
+.stakeholder-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Communication plan styling */
+.communication-plan-item {
+  border-left: 3px solid #007bff;
+  transition: all 0.2s ease;
+}
+
+.communication-plan-item:hover {
+  background-color: #f8f9fa;
+}
+
+.communication-plan-item.completed {
+  border-left-color: #28a745;
+}
+
+.communication-plan-item.overdue {
+  border-left-color: #dc3545;
+}
+
+/* Engagement history timeline */
+.engagement-timeline {
+  position: relative;
+  padding-left: 40px;
+}
+
+.engagement-timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 15px;
+  width: 2px;
+  background-color: #dee2e6;
+}
+
+.engagement-item {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.engagement-item::before {
+  content: '';
+  position: absolute;
+  left: -32px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #007bff;
+}
+
+.engagement-item.meeting::before {
+  background-color: #007bff;
+}
+
+.engagement-item.email::before {
+  background-color: #28a745;
+}
+
+.engagement-item.phone::before {
+  background-color: #fd7e14;
+}
+
+.engagement-item.feedback::before {
+  background-color: #dc3545;
+}
+
+.engagement-item.workshop::before {
+  background-color: #6f42c1;
+}

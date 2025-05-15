@@ -135,7 +135,7 @@ const projectService = {
   
   getProjectById: async (id) => {
     try {
-      const response = await api.get(`/projects/${id}`);
+      const response = await api.get(`http://localhost:5000/api/projects/${id}`);
       return response.data.data;
     } catch (error) {
       console.log(`Falling back to mock data for project ${id}:`, error);
@@ -145,7 +145,7 @@ const projectService = {
   
   getProjectWithDetails: async (id) => {
     try {
-      const response = await api.get(`/projects/${id}/details`);
+      const response = await api.get(`http://localhost:5000/api/projects/${id}/details`);
       return response.data.data;
     } catch (error) {
       console.log(`Falling back to mock data for project details ${id}:`, error);

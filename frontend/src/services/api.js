@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+// Make sure this points to your actual backend API
+// If in development, it should typically be http://localhost:portnumber/api
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Create axios instance with defaults
@@ -13,6 +15,9 @@ const api = axios.create({
 // Add a request interceptor for authentication
 api.interceptors.request.use(
   (config) => {
+    // For debugging
+    console.log(`API Request: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
+    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -24,13 +29,39 @@ api.interceptors.request.use(
 
 // Add a response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // For debugging
+    console.log(`API Response from ${response.config.url}: Status ${response.status}`);
+    return response;
+  },
   (error) => {
-    // Handle session expiration or authentication errors
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    // Enhanced error logging
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('API Error Response:', {
+        status: error.response.status,
+        url: error.config?.url,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+      
+      // Handle session expiration or authentication errors
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('API No Response:', {
+        request: error.request,
+        url: error.config?.url
+      });
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('API Request Error:', error.message);
     }
+    
     return Promise.reject(error);
   }
 );
@@ -45,13 +76,21 @@ export const projectApi = {
   delete: (id) => api.delete(`/projects/${id}`)
 };
 
-// Tasks API
+// Tasks API - Ensure endpoints match your backend API
 export const taskApi = {
-  getAll: (projectId) => api.get('/tasks', { params: { projectId } }),
+  getAll: (projectId) => {
+    const url = projectId ? `/projects/${projectId}/tasks` : '/tasks';
+    return api.get(url);
+  },
   getById: (id) => api.get(`/tasks/${id}`),
   create: (data) => api.post('/tasks', data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
-  delete: (id) => api.delete(`/tasks/${id}`)
+  delete: (id) => api.delete(`/tasks/${id}`),
+  uploadFile: (id, formData) => api.post(`/tasks/${id}/upload`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
 };
 
 // Resources API

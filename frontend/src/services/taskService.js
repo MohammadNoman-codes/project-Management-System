@@ -1,39 +1,88 @@
-import api from './api';
+import { taskApi } from './api';
 
 const taskService = {
   getAllTasks: async (projectId = null) => {
-    const url = projectId ? `/tasks?projectId=${projectId}` : '/tasks';
-    const response = await api.get(url);
-    return response.data.data;
+    try {
+      console.log(`Fetching tasks for project ID: ${projectId || 'all'}`);
+      const response = await taskApi.getAll(projectId);
+      
+      // Check if we actually have the data we expect
+      if (!response.data) {
+        console.error('Invalid response format:', response);
+        throw new Error('Invalid API response format - no data property');
+      }
+      
+      // If your API returns data inside a data property, keep this line
+      // Otherwise, adjust this to match your API's response format
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in getAllTasks:', error);
+      throw error;
+    }
   },
   
   getTaskById: async (id) => {
-    const response = await api.get(`/tasks/${id}`);
-    return response.data.data;
+    try {
+      console.log(`Fetching task ID: ${id}`);
+      const response = await taskApi.getById(id);
+      
+      // Check if we actually have the data we expect
+      if (!response.data) {
+        console.error('Invalid response format:', response);
+        throw new Error('Invalid API response format - no data property');
+      }
+      
+      // If your API returns data inside a data property, keep this line
+      // Otherwise, adjust this to match your API's response format
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in getTaskById:', error);
+      throw error;
+    }
   },
   
   createTask: async (taskData) => {
-    const response = await api.post('/tasks', taskData);
-    return response.data.data;
+    try {
+      console.log('Creating task with data:', taskData);
+      const response = await taskApi.create(taskData);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in createTask:', error);
+      throw error;
+    }
   },
   
   updateTask: async (id, taskData) => {
-    const response = await api.put(`/tasks/${id}`, taskData);
-    return response.data.data;
+    try {
+      console.log(`Updating task ID: ${id} with data:`, taskData);
+      const response = await taskApi.update(id, taskData);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in updateTask:', error);
+      throw error;
+    }
   },
   
   deleteTask: async (id) => {
-    const response = await api.delete(`/tasks/${id}`);
-    return response.data;
+    try {
+      console.log(`Deleting task ID: ${id}`);
+      const response = await taskApi.delete(id);
+      return response.data;
+    } catch (error) {
+      console.error('Error in deleteTask:', error);
+      throw error;
+    }
   },
   
   uploadTaskFile: async (taskId, formData) => {
-    const response = await api.post(`/tasks/${taskId}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      console.log(`Uploading file for task ID: ${taskId}`);
+      const response = await taskApi.uploadFile(taskId, formData);
+      return response.data;
+    } catch (error) {
+      console.error('Error in uploadTaskFile:', error);
+      throw error;
+    }
   }
 };
 

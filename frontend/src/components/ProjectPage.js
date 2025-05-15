@@ -301,6 +301,7 @@ function ProjectPage() {
   
   // Handle drag end for board view
   const onDragEnd = async (result) => {
+    console.log('Drag end result:', result); // Debug logging
     const { destination, source, draggableId } = result;
   
     // If there's no destination or the item was dropped back in the same place, do nothing
@@ -312,19 +313,25 @@ function ProjectPage() {
   
     // Extract the actual task ID from the draggableId (removing the 'task-' prefix)
     const taskId = draggableId.replace('task-', '');
+    console.log('Extracted taskId:', taskId); // Debug logging
     
     // Find the task that was dragged
-    const draggedTask = tasks.find(task => task.id.toString() === taskId);
-    if (!draggedTask) return;
+    const draggedTask = tasks.find(task => String(task.id) === taskId);
+    console.log('Found draggedTask:', draggedTask); // Debug logging
+    
+    if (!draggedTask) {
+      console.error(`Could not find task with id: ${taskId}`);
+      return;
+    }
     
     // Determine the new status based on destination column
     const newStatus = destination.droppableId === 'Completed' ? 'Completed' : 
                        destination.droppableId === 'In Progress' ? 'In Progress' : 
                        destination.droppableId === 'Review' ? 'Review' : 'To Do';
-
+  
     // Update the task's column status locally first (optimistic update)
     const updatedTasks = tasks.map(task => {
-      if (task.id.toString() === taskId) {
+      if (String(task.id) === taskId) {
         return {
           ...task,
           columnStatus: destination.droppableId,
@@ -351,7 +358,7 @@ function ProjectPage() {
       if (project && project.milestones) {
         const updatedMilestones = project.milestones.map(milestone => {
           const updatedTasks = milestone.tasks?.map(task => {
-            if (task.id.toString() === taskId) {
+            if (String(task.id) === taskId) {
               return { ...task, status: newStatus };
             }
             return task;
@@ -510,8 +517,12 @@ function ProjectPage() {
             // Find the milestone this task belongs to
             const milestone = projectData.milestones?.find(m => m.id === task.milestone_id);
             
+            // Ensure task.id is a string for consistency
+            const taskId = String(task.id);
+            
             return {
               ...task,
+              id: taskId, // Ensure ID is a string
               milestone: milestone?.name || 'Unknown Milestone',
               milestoneId: task.milestone_id,
               columnStatus: task.status === 'Completed' ? 'Completed' :
@@ -672,7 +683,9 @@ function ProjectPage() {
               <h6 className="text-muted mb-2">Timeline</h6>
               <div className="d-flex align-items-center">
                 <i className="bi bi-calendar3 me-2" style={{ color: purpleColors.secondary }}></i>
-                <span>{project.startDate} - {project.endDate}</span>
+                <span>
+                  {project.start_date || project.startDate || 'Start date'} - {project.end_date || project.endDate || 'End date'}
+                </span>
               </div>
             </div>
             <div className="col-md-4">
@@ -873,58 +886,66 @@ function ProjectPage() {
                         style={{ minHeight: '400px', padding: '0.75rem' }}
                       >
                         {getTasksByColumn(columnName).length > 0 ? (
-                          getTasksByColumn(columnName).map((task, index) => (
-                            <Draggable
-                              key={`task-${task.id}`}
-                              draggableId={`task-${task.id}`}
-                              index={index}
-                            >
-                              {(provided) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className="card mb-3"
-                                  style={{
-                                    borderLeft: `4px solid ${getStatusColor(task.status)}`,
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                    ...provided.draggableProps.style
-                                  }}
-                                >
-                                  <div className="card-body p-3">
-                                    <div className="d-flex justify-content-between align-items-start mb-2">
-                                      <h6 className="card-title mb-0">{task.name}</h6>
-                                      <span className="badge" style={{ backgroundColor: getStatusColor(task.status), fontSize: '0.65rem' }}>
-                                        {task.status}
-                                      </span>
-                                    </div>
-                                    <p className="text-muted small mb-2">
-                                      <i className="bi bi-flag me-1"></i> {task.milestone}
-                                    </p>
-                                    <p className="text-muted small mb-2">
-                                      <i className="bi bi-calendar-event me-1"></i> Due: {task.dueDate}
-                                    </p>
-                                    <div className="d-flex align-items-center">
-                                      <div className="avatar-circle me-2" style={{ 
-                                        backgroundColor: `rgba(${safeHexToRgb(purpleColors.primary)}, 0.1)`,
-                                        color: purpleColors.primary,
-                                        width: '24px',
-                                        height: '24px',
-                                        borderRadius: '50%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.7rem'
-                                      }}>
-                                        {task.assignedTo?.name ? task.assignedTo.name.charAt(0) : '?'}
+                          getTasksByColumn(columnName).map((task, index) => {
+                            // Ensure taskId is consistently a string
+                            const taskId = String(task.id);
+                            
+                            // Create a consistent draggableId
+                            const draggableId = `task-${taskId}`;
+                            
+                            return (
+                              <Draggable
+                                key={draggableId}
+                                draggableId={draggableId}
+                                index={index}
+                              >
+                                {(provided) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className="card mb-3"
+                                    style={{
+                                      borderLeft: `4px solid ${getStatusColor(task.status)}`,
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                                      ...provided.draggableProps.style
+                                    }}
+                                  >
+                                    <div className="card-body p-3">
+                                      <div className="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 className="card-title mb-0">{task.name}</h6>
+                                        <span className="badge" style={{ backgroundColor: getStatusColor(task.status), fontSize: '0.65rem' }}>
+                                          {task.status}
+                                        </span>
                                       </div>
-                                      <small className="text-muted">{task.assignedTo?.name || 'Unassigned'}</small>
+                                      <p className="text-muted small mb-2">
+                                        <i className="bi bi-flag me-1"></i> {task.milestone}
+                                      </p>
+                                      <p className="text-muted small mb-2">
+                                        <i className="bi bi-calendar-event me-1"></i> Due: {task.dueDate || task.due_date}
+                                      </p>
+                                      <div className="d-flex align-items-center">
+                                        <div className="avatar-circle me-2" style={{ 
+                                          backgroundColor: `rgba(${safeHexToRgb(purpleColors.primary)}, 0.1)`,
+                                          color: purpleColors.primary,
+                                          width: '24px',
+                                          height: '24px',
+                                          borderRadius: '50%',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '0.7rem'
+                                        }}>
+                                          {task.assignedTo?.name ? task.assignedTo.name.charAt(0) : '?'}
+                                        </div>
+                                        <small className="text-muted">{task.assignedTo?.name || 'Unassigned'}</small>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )}
-                            </Draggable>
-                          ))
+                                )}
+                              </Draggable>
+                            );
+                          })
                         ) : (
                           <div className="text-center p-3">
                             <p className="text-muted small">No tasks in this column</p>

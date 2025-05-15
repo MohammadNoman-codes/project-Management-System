@@ -30,56 +30,50 @@ class Task {
   // Get task by ID
   static getById(id, callback) {
     const query = `
-      SELECT t.*, u.name as assigned_to_name, u.avatar as assigned_to_avatar, m.name as milestone_name
-      FROM tasks t
-      LEFT JOIN users u ON t.assigned_to = u.id
-      LEFT JOIN milestones m ON t.milestone_id = m.id
-      WHERE t.id = ?
-    `;
-    
-    db.get(query, [id], (err, row) => {
-      if (err) {
-        return callback(err, null);
-      }
-      
-      if (!row) {
-        return callback(null, null);
-      }
-      
-      // Get task dependencies
-      const dependenciesQuery = `
-        SELECT td.*, t.name
-        FROM task_dependencies td
-        JOIN tasks t ON td.depends_on_task_id = t.id
-        WHERE td.task_id = ?
-      `;
-      
-      db.all(dependenciesQuery, [id], (err, dependencies) => {
-        if (err) {
-          return callback(err, null);
+    SELECT t.*, u.name AS assigned_to_name, u.avatar AS assigned_to_avatar, m.name AS milestone_name
+    FROM tasks t
+    LEFT JOIN users u ON t.assigned_to = u.id
+    LEFT JOIN milestones m ON t.milestone_id = m.id
+    WHERE t.project_id = ?
+  `;
+
+  db.all(query, [id], (err, rows) => {
+    if (err) return callback(err);
+    if (!rows.length) return callback(null, []);
+
+    // For each task, fetch its dependencies and files
+    const tasksWithDetails = [];
+    let pending = rows.length;
+    rows.forEach(row => {
+      // Fetch dependencies
+      db.all(
+        `SELECT td.depends_on_task_id FROM task_dependencies td WHERE td.task_id = ?`,
+        [row.id],
+        (err, deps) => {
+          if (err) return callback(err);
+
+          // Fetch files
+          db.all(
+            `SELECT * FROM task_files WHERE task_id = ?`,
+            [row.id],
+            (err, files) => {
+              if (err) return callback(err);
+
+              tasksWithDetails.push({
+                ...row,
+                dependencies: deps.map(d => d.depends_on_task_id),
+                files
+              });
+
+              if (--pending === 0) {
+                callback(null, tasksWithDetails);
+              }
+            }
+          );
         }
-        
-        // Get task files
-        const filesQuery = `
-          SELECT * FROM task_files
-          WHERE task_id = ?
-        `;
-        
-        db.all(filesQuery, [id], (err, files) => {
-          if (err) {
-            return callback(err, null);
-          }
-          
-          const taskWithDetails = {
-            ...row,
-            dependencies: dependencies.map(dep => dep.depends_on_task_id),
-            files
-          };
-          
-          callback(null, taskWithDetails);
-        });
-      });
+      );
     });
+  });
   }
   
   // Create new task

@@ -77,8 +77,11 @@ const riskService = {
         throw new Error('A project must be selected to create a risk');
       }
       
-      // Send the complete risk data to the API
-      const response = await riskApi.create(riskData);
+      // Remove any potential triggers field to avoid JSON parsing issues
+      const { triggers, ...cleanRiskData } = riskData;
+      
+      // Send the clean risk data to the API
+      const response = await riskApi.create(cleanRiskData);
       return response.data.data;
     } catch (error) {
       console.error('Error in createRisk:', error);
@@ -90,7 +93,11 @@ const riskService = {
   updateRisk: async (id, riskData) => {
     try {
       console.log(`Updating risk ID: ${id}`, riskData);
-      const response = await riskApi.update(id, riskData);
+      
+      // Remove any potential triggers field to avoid JSON parsing issues
+      const { triggers, ...cleanRiskData } = riskData;
+      
+      const response = await riskApi.update(id, cleanRiskData);
       return response.data.data;
     } catch (error) {
       console.error('Error in updateRisk:', error);

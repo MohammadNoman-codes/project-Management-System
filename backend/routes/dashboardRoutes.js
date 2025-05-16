@@ -53,9 +53,8 @@ router.get('/kpis', async (req, res) => {
     // Count active risks
     const activeRisksRow = await dbGet(
       `SELECT COUNT(*) as count 
-       FROM tasks 
-       WHERE status != 'Completed'
-       AND (priority = 'High' OR priority = 'Critical')`
+       FROM risks 
+       `
     );
     const activeRisks = activeRisksRow.count;
     

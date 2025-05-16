@@ -71,7 +71,6 @@ exports.createRisk = (req, res) => {
     mitigation_plan: req.body.mitigation_plan,
     contingency_plan: req.body.contingency_plan,
     owner_id: req.body.owner_id,
-    triggers: req.body.triggers,
     identified_date: req.body.identified_date,
     review_date: req.body.review_date,
     project_id: req.body.project_id
@@ -118,7 +117,6 @@ exports.updateRisk = (req, res) => {
     mitigation_plan: req.body.mitigation_plan,
     contingency_plan: req.body.contingency_plan,
     owner_id: req.body.owner_id,
-    triggers: req.body.triggers,
     identified_date: req.body.identified_date,
     review_date: req.body.review_date,
     project_id: req.body.project_id

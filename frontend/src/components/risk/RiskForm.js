@@ -52,14 +52,12 @@ function RiskForm({ risk, onSubmit, onCancel, projectId, projects = [], users = 
     owner_id: '',
     mitigation_plan: '',
     contingency_plan: '',
-    triggers: [],
     identified_date: new Date().toISOString().split('T')[0],
     review_date: ''
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
-  const [newTrigger, setNewTrigger] = useState('');
   
   // Calculate risk score
   const riskScore = formData.probability * formData.impact;
@@ -79,7 +77,6 @@ function RiskForm({ risk, onSubmit, onCancel, projectId, projects = [], users = 
         owner_id: risk.owner_id || '',
         mitigation_plan: risk.mitigation_plan || '',
         contingency_plan: risk.contingency_plan || '',
-        triggers: risk.triggers || [],
         identified_date: risk.identified_date || new Date().toISOString().split('T')[0],
         review_date: risk.review_date || ''
       });
@@ -122,32 +119,6 @@ function RiskForm({ risk, onSubmit, onCancel, projectId, projects = [], users = 
     // Clear validation errors when field is updated
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
-    }
-  };
-  
-  // Handle trigger input
-  const handleAddTrigger = () => {
-    if (newTrigger.trim()) {
-      setFormData({
-        ...formData,
-        triggers: [...formData.triggers, newTrigger.trim()]
-      });
-      setNewTrigger('');
-    }
-  };
-  
-  // Remove a trigger
-  const handleRemoveTrigger = (index) => {
-    const updatedTriggers = [...formData.triggers];
-    updatedTriggers.splice(index, 1);
-    setFormData({ ...formData, triggers: updatedTriggers });
-  };
-  
-  // Handle key press for trigger input
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && newTrigger.trim()) {
-      e.preventDefault();
-      handleAddTrigger();
     }
   };
   
@@ -462,57 +433,6 @@ function RiskForm({ risk, onSubmit, onCancel, projectId, projects = [], users = 
               onChange={handleInputChange}
               placeholder="Actions to take if the risk materializes"
             ></textarea>
-          </div>
-          
-          <div className="mb-3">
-            <label className="form-label">
-              Triggers / Early Warning Signs
-            </label>
-            <div className="input-group mb-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Add a trigger or early warning sign"
-                value={newTrigger}
-                onChange={(e) => setNewTrigger(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-              <button
-                type="button"
-                className="btn btn-outline-primary"
-                onClick={handleAddTrigger}
-              >
-                <i className="bi bi-plus-lg"></i> Add
-              </button>
-            </div>
-            
-            {formData.triggers.length > 0 ? (
-              <ul className="list-group">
-                {formData.triggers.map((trigger, index) => (
-                  <li 
-                    key={index} 
-                    className="list-group-item d-flex justify-content-between align-items-center"
-                  >
-                    <div>
-                      <i className="bi bi-arrow-right-circle me-2"></i>
-                      {trigger}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger rounded-pill"
-                      onClick={() => handleRemoveTrigger(index)}
-                    >
-                      <i className="bi bi-x-lg"></i>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-muted small">
-                <i className="bi bi-info-circle me-1"></i>
-                No triggers added. Triggers help identify when a risk is about to materialize.
-              </div>
-            )}
           </div>
           
           <div className="d-flex justify-content-end mt-4">

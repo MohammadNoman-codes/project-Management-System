@@ -23,7 +23,7 @@ class Risk {
         return callback(err, null);
       }
       
-      // Parse JSON triggers if they exist
+      // Modified to remove triggers parsing
       const risks = rows.map(row => ({
         id: row.id,
         title: row.title,
@@ -38,7 +38,6 @@ class Risk {
         owner_id: row.owner_id,
         owner_name: row.owner_name,
         owner_avatar: row.owner_avatar,
-        triggers: JSON.parse(row.triggers || '[]'),
         identified_date: row.identified_date,
         review_date: row.review_date,
         project_id: row.project_id
@@ -66,7 +65,7 @@ class Risk {
         return callback(null, null);
       }
       
-      // Parse JSON triggers if they exist
+      // Modified to remove triggers parsing
       const risk = {
         id: row.id,
         title: row.title,
@@ -81,7 +80,6 @@ class Risk {
         owner_id: row.owner_id,
         owner_name: row.owner_name,
         owner_avatar: row.owner_avatar,
-        triggers: JSON.parse(row.triggers || '[]'),
         identified_date: row.identified_date,
         review_date: row.review_date,
         project_id: row.project_id
@@ -104,7 +102,6 @@ class Risk {
       mitigation_plan,
       contingency_plan,
       owner_id,
-      triggers,
       identified_date,
       review_date,
       project_id
@@ -122,18 +119,12 @@ class Risk {
         mitigation_plan,
         contingency_plan,
         owner_id,
-        triggers,
         identified_date,
         review_date,
         project_id,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `;
-    
-    // Convert triggers array to JSON string if it's not already a string
-    const triggersJson = typeof triggers === 'string' ? 
-      triggers : 
-      JSON.stringify(triggers || []);
     
     db.run(
       query,
@@ -148,7 +139,6 @@ class Risk {
         mitigation_plan,
         contingency_plan,
         owner_id,
-        triggersJson,
         identified_date || new Date().toISOString().split('T')[0],
         review_date,
         project_id
@@ -191,7 +181,6 @@ class Risk {
     addFieldIfExists('identified_date');
     addFieldIfExists('mitigation_plan');
     addFieldIfExists('contingency_plan');
-    addFieldIfExists('triggers');
     addFieldIfExists('review_date');
     
     // Add updated_at timestamp
@@ -221,14 +210,8 @@ class Risk {
         return callback(null, null);
       }
       
-      // Parse triggers back to array for response
-      const responseData = {
-        id,
-        ...riskData,
-        triggers: riskData.triggers ? JSON.parse(riskData.triggers) : undefined
-      };
-      
-      callback(null, responseData);
+      // Get the updated risk
+      Risk.getById(id, callback);
     });
   }
   

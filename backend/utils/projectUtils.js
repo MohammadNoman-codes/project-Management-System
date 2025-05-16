@@ -19,20 +19,38 @@ const MILESTONE_WEIGHTS = {
  * @returns {number} - Completion percentage
  */
 function calculateProjectCompletion(milestones) {
+  console.log('Calculating project completion with milestones:', milestones);
+  
   if (!milestones || milestones.length === 0) {
+    console.log('No milestones found, returning 0% completion');
     return 0;
   }
   
   let completionPercentage = 0;
+  let totalWeight = 0;
   
+  // First, log all the milestone names and their weights
+  console.log('Available milestone weights:');
+  Object.entries(MILESTONE_WEIGHTS).forEach(([name, weight]) => {
+    console.log(`${name}: ${weight}%`);
+  });
+  
+  // Then calculate completion
   milestones.forEach(milestone => {
+    const milestoneName = milestone.name;
+    const weight = MILESTONE_WEIGHTS[milestoneName] || 0;
+    totalWeight += weight;
+    
     // If the milestone is completed, add its weight to the completion percentage
     if (milestone.status === 'Completed') {
-      // Get the milestone weight by name or use default weight
-      const weight = MILESTONE_WEIGHTS[milestone.name] || 0;
+      console.log(`Milestone "${milestoneName}" is completed, adding ${weight}% to completion`);
       completionPercentage += weight;
+    } else {
+      console.log(`Milestone "${milestoneName}" is not completed (status: ${milestone.status}), weight: ${weight}%`);
     }
   });
+  
+  console.log(`Total completion: ${completionPercentage}% out of ${totalWeight}% total weight`);
   
   // Ensure the completion percentage doesn't exceed 100
   return Math.min(completionPercentage, 100);

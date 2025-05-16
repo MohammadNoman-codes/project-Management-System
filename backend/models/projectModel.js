@@ -329,6 +329,33 @@ class Project {
     );
   }
   
+  // Update only the project completion percentage
+  static updateCompletion(id, completionPercentage, callback) {
+    console.log(`Updating project ${id} completion to ${completionPercentage}%`);
+    
+    const query = `
+      UPDATE projects 
+      SET completion = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    
+    db.run(query, [completionPercentage, id], function(err) {
+      if (err) {
+        console.error(`Error updating project completion: ${err.message}`);
+        return callback(err, null);
+      }
+      
+      if (this.changes === 0) {
+        console.warn(`Project with ID ${id} not found or completion value unchanged`);
+        return callback(new Error(`Project with ID ${id} not found`), null);
+      }
+      
+      console.log(`Successfully updated project ${id} completion to ${completionPercentage}%`);
+      callback(null, { id, completion: completionPercentage, updated: true });
+    });
+  }
+  
   // Delete project
   static delete(id, callback) {
     const query = `DELETE FROM projects WHERE id = ?`;

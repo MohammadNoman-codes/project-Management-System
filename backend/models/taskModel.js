@@ -75,6 +75,58 @@ class Task {
     });
   });
   }
+
+  // Get a single task by ID with all details
+  static getTasksByID(id, callback) {
+    const query = `
+      SELECT t.*, u.name AS assigned_to_name, u.avatar AS assigned_to_avatar, m.name AS milestone_name
+      FROM tasks t
+      LEFT JOIN users u ON t.assigned_to = u.id
+      LEFT JOIN milestones m ON t.milestone_id = m.id
+      WHERE t.id = ?
+    `;
+    
+    db.get(query, [id], (err, task) => {
+      if (err) {
+        return callback(err, null);
+      }
+      
+      if (!task) {
+        return callback(null, null);
+      }
+      
+      // Get task dependencies
+      db.all(
+        `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = ?`,
+        [id],
+        (err, dependencies) => {
+          if (err) {
+            return callback(err, null);
+          }
+          
+          // Get task files
+          db.all(
+            `SELECT * FROM task_files WHERE task_id = ?`,
+            [id],
+            (err, files) => {
+              if (err) {
+                return callback(err, null);
+              }
+              
+              // Return complete task data
+              const taskWithDetails = {
+                ...task,
+                dependencies: dependencies ? dependencies.map(d => d.depends_on_task_id) : [],
+                files: files || []
+              };
+              
+              callback(null, taskWithDetails);
+            }
+          );
+        }
+      );
+    });
+  }
   
   // Create new task
   static create(taskData, callback) {
@@ -149,28 +201,6 @@ class Task {
         callback(null, { id: taskId, ...taskData });
       }
     );
-  }
-  
-  // Update only the task status
-  static updateStatus(id, status, callback) {
-    const query = `
-      UPDATE tasks 
-      SET status = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `;
-    
-    db.run(query, [status, id], function(err) {
-      if (err) {
-        return callback(err, null);
-      }
-      
-      if (this.changes === 0) {
-        return callback(new Error(`Task with ID ${id} not found`), null);
-      }
-      
-      callback(null, { id, status, updated: true });
-    });
   }
   
   // Update task
@@ -255,6 +285,38 @@ class Task {
     );
   }
   
+  // Update task status only
+  static updateStatus(id, status, callback) {
+    console.log(`Updating status for task ID: ${id} to ${status}`);
+    
+    const query = `
+      UPDATE tasks 
+      SET status = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    
+    db.run(query, [status, id], function(err) {
+      if (err) {
+        console.error(`Error updating task status: ${err.message}`);
+        return callback(err, null);
+      }
+      
+      if (this.changes === 0) {
+        return callback(new Error(`Task with ID ${id} not found`), null);
+      }
+      
+      // Get the updated task to return
+      Task.getTasksByID(id, (err, updatedTask) => {
+        if (err) {
+          return callback(err, null);
+        }
+        
+        callback(null, updatedTask);
+      });
+    });
+  }
+
   // Delete task
   static delete(id, callback) {
     const query = `DELETE FROM tasks WHERE id = ?`;

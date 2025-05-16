@@ -148,38 +148,51 @@ exports.updateTaskStatus = (req, res) => {
     try {
       // After status update, if status is "Completed", recalculate project completion
       if (status === 'Completed') {
-        // First, get the project ID from the task
-        const task = await new Promise((resolve, reject) => {
-          Task.getById(id, (err, taskData) => {
-            if (err) reject(err);
-            else resolve(taskData);
+        console.log(`Task ${id} marked as completed. Recalculating project completion...`);
+        
+        // First, get the task to obtain project_id
+        Task.getTasksByID(id, async (taskErr, taskData) => {
+          if (taskErr) {
+            console.error(`Error fetching task ${id}:`, taskErr);
+            return;
+          }
+          
+          // Make sure we have a valid task with a project_id
+          if (!taskData || !taskData.project_id) {
+            console.error(`No valid project ID found for task ${id}`);
+            return;
+          }
+          
+          const projectId = taskData.project_id;
+          console.log(`Found project ID ${projectId} for task ${id}`);
+          
+          // Fetch the project with all milestones
+          Project.getWithDetails(projectId, async (projectErr, projectData) => {
+            if (projectErr) {
+              console.error(`Error fetching project ${projectId}:`, projectErr);
+              return;
+            }
+            
+            if (!projectData || !projectData.milestones) {
+              console.error(`No milestones found for project ${projectId}`);
+              return;
+            }
+            
+            // Calculate the updated completion percentage
+            const completionPercentage = calculateProjectCompletion(projectData.milestones);
+            console.log(`Calculated ${completionPercentage}% completion for project ${projectId}`);
+            
+            // Use the specialized method to update just the completion percentage
+            Project.updateCompletion(projectId, completionPercentage, (updateErr, updateResult) => {
+              if (updateErr) {
+                console.error(`Error updating project completion:`, updateErr);
+                return;
+              }
+              
+              console.log(`Successfully updated project completion:`, updateResult);
+            });
           });
         });
-        
-        if (task && task.project_id) {
-          // Fetch the project with all milestones
-          const project = await new Promise((resolve, reject) => {
-            Project.getWithDetails(task.project_id, (err, projectData) => {
-              if (err) reject(err);
-              else resolve(projectData);
-            });
-          });
-          
-          if (project && project.milestones) {
-            // Calculate the updated completion percentage
-            const completionPercentage = calculateProjectCompletion(project.milestones);
-            
-            // Update the project completion
-            await new Promise((resolve, reject) => {
-              Project.update(task.project_id, { completion: completionPercentage }, (err, updatedProject) => {
-                if (err) reject(err);
-                else resolve(updatedProject);
-              });
-            });
-            
-            console.log(`Updated project ${task.project_id} completion to ${completionPercentage}%`);
-          }
-        }
       }
       
       res.status(200).json({

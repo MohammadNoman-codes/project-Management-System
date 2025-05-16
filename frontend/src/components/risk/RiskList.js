@@ -1,6 +1,6 @@
 import React from 'react';
 
-function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
+function RiskList({ risks, onEdit, onDelete, filter, onFilterChange, projects = [] }) {
   // Purple-themed color palette for charts to match Dashboard
   const chartColors = {
     // Primary purple shades
@@ -41,11 +41,43 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
     }
   };
 
+  // Apply filters
+  const filteredRisks = risks.filter(risk => {
+    // Category filter
+    if (filter.category !== 'all' && risk.category !== filter.category) {
+      return false;
+    }
+    
+    // Status filter
+    if (filter.status !== 'all' && risk.status !== filter.status) {
+      return false;
+    }
+    
+    // Severity filter
+    if (filter.severity !== 'all') {
+      const score = risk.risk_score || risk.riskScore;
+      if (filter.severity === 'critical' && score < 16) return false;
+      if (filter.severity === 'high' && (score < 11 || score >= 16)) return false;
+      if (filter.severity === 'medium' && (score < 6 || score >= 11)) return false;
+      if (filter.severity === 'low' && score > 5) return false;
+    }
+    
+    // Project filter
+    if (filter.project !== 'all' && risk.project_id !== filter.project) {
+      return false;
+    }
+    
+    return true;
+  });
+
   // Get unique risk categories for filter dropdown
   const categories = ['all', ...new Set(risks.map(risk => risk.category))];
   
   // Get unique risk statuses for filter dropdown
   const statuses = ['all', ...new Set(risks.map(risk => risk.status))];
+  
+  // Get unique project IDs for filter dropdown
+  const projectIds = ['all', ...new Set(risks.map(risk => risk.project_id))];
   
   // Handle filter changes
   const handleFilterChange = (e) => {
@@ -105,7 +137,30 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
         
         <div className="card-body pb-0">
           <div className="row mb-3">
-            <div className="col-md-4 mb-2">
+            {/* Add project filter dropdown */}
+            {projects && projects.length > 0 && (
+              <div className="col-md-3 mb-2">
+                <div className="input-group">
+                  <span className="input-group-text bg-light border-end-0">
+                    <i className="bi bi-briefcase" style={{ color: chartColors.primary }}></i>
+                  </span>
+                  <select 
+                    className="form-select form-select-sm rounded-end"
+                    name="project"
+                    value={filter.project}
+                    onChange={handleFilterChange}
+                    style={{ borderLeft: 0 }}
+                  >
+                    <option value="all">All Projects</option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>{project.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+            
+            <div className="col-md-3 mb-2">
               <div className="input-group">
                 <span className="input-group-text bg-light border-end-0">
                   <i className="bi bi-tag" style={{ color: chartColors.primary }}></i>
@@ -125,7 +180,7 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               </div>
             </div>
             
-            <div className="col-md-4 mb-2">
+            <div className="col-md-3 mb-2">
               <div className="input-group">
                 <span className="input-group-text bg-light border-end-0">
                   <i className="bi bi-flag" style={{ color: chartColors.secondary }}></i>
@@ -145,7 +200,7 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               </div>
             </div>
             
-            <div className="col-md-4 mb-2">
+            <div className="col-md-3 mb-2">
               <div className="input-group">
                 <span className="input-group-text bg-light border-end-0">
                   <i className="bi bi-exclamation-diamond" style={{ color: chartColors.tertiary }}></i>
@@ -174,7 +229,7 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               border: `1px solid rgba(${safeHexToRgb(chartColors.critical)}, 0.2)`
             }}>
               <i className="bi bi-exclamation-diamond-fill me-1"></i>
-              Critical: {risks.filter(r => r.riskScore >= 16).length}
+              Critical: {risks.filter(r => (r.risk_score || r.riskScore) >= 16).length}
             </span>
             
             <span className="badge rounded-pill me-2" style={{ 
@@ -183,7 +238,10 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               border: `1px solid rgba(${safeHexToRgb(chartColors.high)}, 0.2)`
             }}>
               <i className="bi bi-exclamation-circle-fill me-1"></i>
-              High: {risks.filter(r => r.riskScore >= 11 && r.riskScore <= 15).length}
+              High: {risks.filter(r => {
+                const score = r.risk_score || r.riskScore;
+                return score >= 11 && score <= 15;
+              }).length}
             </span>
             
             <span className="badge rounded-pill me-2" style={{ 
@@ -192,7 +250,10 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               border: `1px solid rgba(${safeHexToRgb(chartColors.medium)}, 0.2)`
             }}>
               <i className="bi bi-exclamation me-1"></i>
-              Medium: {risks.filter(r => r.riskScore >= 6 && r.riskScore <= 10).length}
+              Medium: {risks.filter(r => {
+                const score = r.risk_score || r.riskScore;
+                return score >= 6 && score <= 10;
+              }).length}
             </span>
             
             <span className="badge rounded-pill me-2" style={{ 
@@ -201,7 +262,7 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               border: `1px solid rgba(${safeHexToRgb(chartColors.low)}, 0.2)`
             }}>
               <i className="bi bi-info-circle-fill me-1"></i>
-              Low: {risks.filter(r => r.riskScore <= 5).length}
+              Low: {risks.filter(r => (r.risk_score || r.riskScore) <= 5).length}
             </span>
           </div>
         </div>
@@ -212,6 +273,7 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               <tr>
                 <th>ID</th>
                 <th>Risk</th>
+                <th>Project</th> {/* Add Project column */}
                 <th>Category</th>
                 <th style={{ width: '100px' }} title="Risk Score = Probability × Impact">
                   P × I <i className="bi bi-info-circle-fill text-muted ms-1 small"></i>
@@ -224,20 +286,30 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
               </tr>
             </thead>
             <tbody>
-              {risks.length === 0 ? (
+              {filteredRisks.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-4">
+                  <td colSpan="10" className="text-center py-4">
                     <i className="bi bi-search me-2" style={{ fontSize: '1.5rem', color: chartColors.quaternary }}></i>
                     <p className="text-muted mb-0">No risks found matching filter criteria</p>
                   </td>
                 </tr>
               ) : (
-                risks.map(risk => (
+                filteredRisks.map(risk => (
                   <tr key={risk.id}>
                     <td>{risk.id}</td>
                     <td>
                       <div className="fw-bold">{risk.title}</div>
-                      <div className="text-muted small">{risk.description.substring(0, 60)}...</div>
+                      <div className="text-muted small">{risk.description && risk.description.substring(0, 60)}...</div>
+                    </td>
+                    <td>
+                      {/* Display project name */}
+                      <span className="badge rounded-pill" style={{ 
+                        backgroundColor: `rgba(${safeHexToRgb(chartColors.accent3)}, 0.1)`,
+                        color: chartColors.accent3
+                      }}>
+                        <i className="bi bi-briefcase me-1"></i>
+                        {projects.find(p => p.id == risk.project_id)?.title || `Project #${risk.project_id}`}
+                      </span>
                     </td>
                     <td>
                       <span className="badge rounded-pill" style={{ 
@@ -250,9 +322,9 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
                     </td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <div className="badge" style={getSeverityBadgeStyle(risk.riskScore)} 
-                             title={`Risk Score: ${risk.riskScore} (${risk.probability} × ${risk.impact})`}>
-                          {risk.riskScore}
+                        <div className="badge" style={getSeverityBadgeStyle(risk.risk_score || risk.riskScore)} 
+                             title={`Risk Score: ${risk.risk_score || risk.riskScore} (${risk.probability} × ${risk.impact})`}>
+                          {risk.risk_score || risk.riskScore}
                         </div>
                         <small className="text-muted ms-2">
                           ({risk.probability}×{risk.impact})
@@ -265,7 +337,7 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
                       </span>
                     </td>
                     <td>
-                      {risk.owner?.name ? (
+                      {risk.owner_name ? (
                         <div className="d-flex align-items-center">
                           <div className="avatar-circle me-2" style={{ 
                             backgroundColor: `rgba(${safeHexToRgb(chartColors.tertiary)}, 0.2)`,
@@ -278,25 +350,25 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
                             justifyContent: 'center',
                             fontSize: '0.75rem'
                           }}>
-                            {risk.owner.name.charAt(0)}
+                            {risk.owner_name.charAt(0)}
                           </div>
-                          <span>{risk.owner.name}</span>
+                          <span>{risk.owner_name}</span>
                         </div>
                       ) : (
                         <span className="text-muted">Unassigned</span>
                       )}
                     </td>
-                    <td>{formatDate(risk.identifiedDate)}</td>
+                    <td>{formatDate(risk.identified_date)}</td>
                     <td>
-                      {risk.reviewDate && (
+                      {risk.review_date && (
                         <>
-                          {new Date(risk.reviewDate) <= new Date() ? (
+                          {new Date(risk.review_date) <= new Date() ? (
                             <span className="badge bg-danger-subtle text-danger">
                               <i className="bi bi-clock-history me-1"></i>
-                              {formatDate(risk.reviewDate)}
+                              {formatDate(risk.review_date)}
                             </span>
                           ) : (
-                            <span>{formatDate(risk.reviewDate)}</span>
+                            <span>{formatDate(risk.review_date)}</span>
                           )}
                         </>
                       )}
@@ -330,11 +402,10 @@ function RiskList({ risks, onEdit, onDelete, filter, onFilterChange }) {
           </table>
         </div>
         
-        {/* Add pagination for larger risk lists */}
-        {risks.length > 0 && (
+        {filteredRisks.length > 0 && (
           <div className="card-footer bg-white d-flex justify-content-between align-items-center py-2">
             <div className="small text-muted">
-              Showing {risks.length} {risks.length === 1 ? 'risk' : 'risks'}
+              Showing {filteredRisks.length} {filteredRisks.length === 1 ? 'risk' : 'risks'}
             </div>
             <div className="d-flex">
               <button className="btn btn-sm btn-outline-primary rounded-pill disabled me-2">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
+function RiskForm({ risk, onSubmit, onCancel, projectId, projects = [], users = [] }) {
   // Purple-themed color palette for UI elements
   const chartColors = {
     // Primary purple shades
@@ -44,33 +44,53 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    projectId: projectId || '',
+    project_id: projectId || '',
     category: 'Technical',
     probability: 3,
     impact: 3,
     status: 'Identified',
-    owner: '',
-    mitigationPlan: '',
-    contingencyPlan: '',
+    owner_id: '',
+    mitigation_plan: '',
+    contingency_plan: '',
     triggers: [],
-    reviewDate: ''
+    identified_date: new Date().toISOString().split('T')[0],
+    review_date: ''
   });
   
-  const [newTrigger, setNewTrigger] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [newTrigger, setNewTrigger] = useState('');
   
   // Calculate risk score
   const riskScore = formData.probability * formData.impact;
   
-  // Determine risk severity level
-  const getRiskSeverity = (score) => {
-    if (score >= 16) return { level: 'Critical', color: chartColors.critical };
-    if (score >= 11) return { level: 'High', color: chartColors.high };
-    if (score >= 6) return { level: 'Medium', color: chartColors.medium };
-    return { level: 'Low', color: chartColors.low };
-  };
-  
-  const riskSeverity = getRiskSeverity(riskScore);
+  // Initialize form data from existing risk if editing
+  useEffect(() => {
+    if (risk && risk.id) {
+      // Convert backend data structure to form structure
+      setFormData({
+        title: risk.title || '',
+        description: risk.description || '',
+        project_id: risk.project_id || projectId || '',
+        category: risk.category || 'Technical',
+        probability: risk.probability || 3,
+        impact: risk.impact || 3,
+        status: risk.status || 'Identified',
+        owner_id: risk.owner_id || '',
+        mitigation_plan: risk.mitigation_plan || '',
+        contingency_plan: risk.contingency_plan || '',
+        triggers: risk.triggers || [],
+        identified_date: risk.identified_date || new Date().toISOString().split('T')[0],
+        review_date: risk.review_date || ''
+      });
+    } else {
+      // For new risks, make sure project_id is set from the projectId prop
+      setFormData(prev => ({
+        ...prev,
+        project_id: projectId || ''
+      }));
+    }
+  }, [risk, projectId]);
   
   // Risk categories with icons
   const categories = [
@@ -94,28 +114,15 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
     { value: 'Closed', icon: 'bi-archive' }
   ];
   
-  // Team members (would come from API in a real app)
-  const teamMembers = [
-    { id: 1, name: 'John Doe' },
-    { id: 2, name: 'Jane Smith' },
-    { id: 3, name: 'Bob Johnson' }
-  ];
-  
-  // Initialize form if editing
-  useEffect(() => {
-    if (mode === 'edit' && risk) {
-      setFormData({
-        ...risk,
-        owner: risk.owner ? risk.owner.id : '',
-        triggers: risk.triggers || []
-      });
-    }
-  }, [mode, risk]);
-  
-  // Handle input changes
+  // Handle basic form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    
+    // Clear validation errors when field is updated
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
   };
   
   // Handle trigger input
@@ -144,36 +151,75 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
     }
   };
   
+  // Validation function
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.title.trim()) newErrors.title = 'Title is required';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (!formData.category) newErrors.category = 'Category is required';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
   // Form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
-    const validationErrors = {};
-    if (!formData.title) validationErrors.title = 'Title is required';
-    if (!formData.description) validationErrors.description = 'Description is required';
-    
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    if (!validateForm()) {
       return;
     }
     
-    // Format data and submit
-    const submitData = {
-      ...formData,
-      probability: parseInt(formData.probability),
-      impact: parseInt(formData.impact)
-    };
+    setIsSubmitting(true);
     
-    onSubmit(submitData);
+    try {
+      // Prepare data for API - ensure probability, impact, owner_id and project_id are correctly formatted
+      const riskData = {
+        ...formData,
+        probability: Number(formData.probability),
+        impact: Number(formData.impact),
+        // Ensure owner_id is a number or null
+        owner_id: formData.owner_id ? Number(formData.owner_id) : null,
+        // Ensure project_id is passed correctly - convert to number if needed
+        project_id: formData.project_id ? Number(formData.project_id) : null,
+        // Include calculated risk score
+        risk_score: Number(formData.probability) * Number(formData.impact)
+      };
+
+      console.log("Submitting risk data:", riskData);
+      
+      // Additional validation
+      if (!riskData.project_id) {
+        setErrors({ submit: 'A project must be selected to create a risk' });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      await onSubmit(riskData);
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('Error submitting risk:', error);
+      setErrors({ submit: error.message || 'Failed to save risk' });
+      setIsSubmitting(false);
+    }
   };
+  
+  // Determine risk severity level based on calculated score
+  const getRiskSeverity = (score) => {
+    if (score >= 16) return { level: 'Critical', color: chartColors.critical };
+    if (score >= 11) return { level: 'High', color: chartColors.high };
+    if (score >= 6) return { level: 'Medium', color: chartColors.medium };
+    return { level: 'Low', color: chartColors.low };
+  };
+  
+  const riskSeverity = getRiskSeverity(riskScore);
   
   return (
     <div className="risk-form dashboard-card">
       <div className="card-header">
         <h5 className="dashboard-section-title mb-0">
-          <i className={`bi ${mode === 'create' ? 'bi-plus-shield' : 'bi-pencil-square'} me-2`}></i>
-          {mode === 'create' ? 'Create New Risk' : 'Update Risk'}
+          <i className={`bi ${risk && risk.id ? 'bi-pencil-square' : 'bi-plus-shield'} me-2`}></i>
+          {risk && risk.id ? 'Update Risk' : 'Create New Risk'}
         </h5>
       </div>
       <div className="card-body">
@@ -216,9 +262,8 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
 
           <div className="row mb-3">
             <div className="col-md-8">
-              <label htmlFor="title" className="form-label d-flex align-items-center">
-                <i className="bi bi-type-bold me-2" style={{ color: chartColors.primary }}></i>
-                Risk Title <span className="text-danger ms-1">*</span>
+              <label htmlFor="title" className="form-label">
+                Risk Title <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
@@ -229,47 +274,59 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 onChange={handleInputChange}
                 placeholder="Enter a clear, concise risk title"
                 required
-                style={{ 
-                  borderColor: errors.title ? '' : `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                  boxShadow: 'none'
-                }}
               />
               {errors.title && <div className="invalid-feedback">{errors.title}</div>}
             </div>
             <div className="col-md-4">
-              <label htmlFor="category" className="form-label d-flex align-items-center">
-                <i className="bi bi-tag me-2" style={{ color: chartColors.primary }}></i>
-                Category <span className="text-danger ms-1">*</span>
+              <label htmlFor="category" className="form-label">
+                Category <span className="text-danger">*</span>
               </label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className={`bi ${categories.find(c => c.value === formData.category)?.icon}`} style={{ color: chartColors.primary }}></i>
-                </span>
-                <select
-                  className="form-select"
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  required
-                  style={{ 
-                    borderLeft: 0,
-                    borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                    boxShadow: 'none'
-                  }}
-                >
-                  {categories.map(category => (
-                    <option key={category.value} value={category.value}>{category.value}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                className={`form-select ${errors.category ? 'is-invalid' : ''}`}
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                required
+              >
+                {categories.map(category => (
+                  <option key={category.value} value={category.value}>{category.value}</option>
+                ))}
+              </select>
+              {errors.category && <div className="invalid-feedback">{errors.category}</div>}
             </div>
           </div>
           
+          {/* Add project selection when not in project context or always show it for debugging */}
           <div className="mb-3">
-            <label htmlFor="description" className="form-label d-flex align-items-center">
-              <i className="bi bi-card-text me-2" style={{ color: chartColors.primary }}></i>
-              Description <span className="text-danger ms-1">*</span>
+            <label htmlFor="project_id" className="form-label">
+              Project <span className="text-danger">*</span>
+            </label>
+            <div className="input-group">
+              <span className="input-group-text" style={{ color: chartColors.primary }}>
+                <i className="bi bi-briefcase"></i>
+              </span>
+              <select
+                className={`form-select ${errors.project_id ? 'is-invalid' : ''}`}
+                id="project_id"
+                name="project_id"
+                value={formData.project_id}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="">Select Project</option>
+                {projects.map(project => (
+                  <option key={project.id} value={project.id}>{project.title}</option>
+                ))}
+              </select>
+              {errors.project_id && <div className="invalid-feedback">{errors.project_id}</div>}
+            </div>
+            {formData.project_id && <div className="form-text">Selected Project ID: {formData.project_id}</div>}
+          </div>
+          
+          <div className="mb-3">
+            <label htmlFor="description" className="form-label">
+              Description <span className="text-danger">*</span>
             </label>
             <textarea
               className={`form-control ${errors.description ? 'is-invalid' : ''}`}
@@ -278,21 +335,16 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
               rows="3"
               value={formData.description}
               onChange={handleInputChange}
-              required
               placeholder="Detailed description of the risk and its potential impact"
-              style={{ 
-                borderColor: errors.description ? '' : `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                boxShadow: 'none'
-              }}
+              required
             ></textarea>
             {errors.description && <div className="invalid-feedback">{errors.description}</div>}
           </div>
           
           <div className="row mb-4">
             <div className="col-md-4">
-              <label htmlFor="probability" className="form-label d-flex align-items-center">
-                <i className="bi bi-graph-up me-2" style={{ color: chartColors.primary }}></i>
-                Probability (1-5) <span className="text-danger ms-1">*</span>
+              <label htmlFor="probability" className="form-label">
+                Probability (1-5) <span className="text-danger">*</span>
               </label>
               <select
                 className="form-select"
@@ -301,10 +353,6 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 value={formData.probability}
                 onChange={handleInputChange}
                 required
-                style={{ 
-                  borderColor: `rgba(${safeHexToRgb(chartColors.tertiary)}, 0.5)`,
-                  boxShadow: 'none'
-                }}
               >
                 <option value="1">1 - Very Low</option>
                 <option value="2">2 - Low</option>
@@ -312,25 +360,10 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 <option value="4">4 - High</option>
                 <option value="5">5 - Very High</option>
               </select>
-              <div className="mt-2">
-                <div className="progress" style={{ height: '8px' }}>
-                  {[1, 2, 3, 4, 5].map((val) => (
-                    <div 
-                      key={val}
-                      className="progress-bar" 
-                      style={{ 
-                        width: '20%', 
-                        backgroundColor: val <= formData.probability ? chartColors.tertiary : `rgba(${safeHexToRgb(chartColors.tertiary)}, 0.2)`
-                      }}
-                    ></div>
-                  ))}
-                </div>
-              </div>
             </div>
             <div className="col-md-4">
-              <label htmlFor="impact" className="form-label d-flex align-items-center">
-                <i className="bi bi-lightning-charge me-2" style={{ color: chartColors.primary }}></i>
-                Impact (1-5) <span className="text-danger ms-1">*</span>
+              <label htmlFor="impact" className="form-label">
+                Impact (1-5) <span className="text-danger">*</span>
               </label>
               <select
                 className="form-select"
@@ -339,10 +372,6 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 value={formData.impact}
                 onChange={handleInputChange}
                 required
-                style={{ 
-                  borderColor: `rgba(${safeHexToRgb(chartColors.secondary)}, 0.5)`,
-                  boxShadow: 'none'
-                }}
               >
                 <option value="1">1 - Minimal</option>
                 <option value="2">2 - Minor</option>
@@ -350,66 +379,38 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 <option value="4">4 - Major</option>
                 <option value="5">5 - Severe</option>
               </select>
-              <div className="mt-2">
-                <div className="progress" style={{ height: '8px' }}>
-                  {[1, 2, 3, 4, 5].map((val) => (
-                    <div 
-                      key={val}
-                      className="progress-bar" 
-                      style={{ 
-                        width: '20%', 
-                        backgroundColor: val <= formData.impact ? chartColors.secondary : `rgba(${safeHexToRgb(chartColors.secondary)}, 0.2)`
-                      }}
-                    ></div>
-                  ))}
-                </div>
-              </div>
             </div>
             <div className="col-md-4">
-              <label htmlFor="status" className="form-label d-flex align-items-center">
-                <i className="bi bi-flag me-2" style={{ color: chartColors.primary }}></i>
-                Status <span className="text-danger ms-1">*</span>
+              <label htmlFor="status" className="form-label">
+                Status <span className="text-danger">*</span>
               </label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className={`bi ${statuses.find(s => s.value === formData.status)?.icon}`} style={{ color: chartColors.primary }}></i>
-                </span>
-                <select
-                  className="form-select"
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  required
-                  style={{ 
-                    borderLeft: 0,
-                    borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                    boxShadow: 'none'
-                  }}
-                >
-                  {statuses.map(status => (
-                    <option key={status.value} value={status.value}>{status.value}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                className="form-select"
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                required
+              >
+                {statuses.map(status => (
+                  <option key={status.value} value={status.value}>{status.value}</option>
+                ))}
+              </select>
             </div>
           </div>
           
           <div className="row mb-3">
             <div className="col-md-6">
-              <label htmlFor="owner" className="form-label d-flex align-items-center">
-                <i className="bi bi-person me-2" style={{ color: chartColors.primary }}></i>
-                Risk Owner
-              </label>
+              <label htmlFor="owner_id" className="form-label">Risk Owner</label>
               <div className="input-group">
                 <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-person-fill" style={{ color: chartColors.primary }}></i>
+                  <i className="bi bi-person" style={{ color: chartColors.primary }}></i>
                 </span>
                 <select
                   className="form-select"
-                  id="owner"
-                  name="owner"
-                  value={formData.owner}
+                  id="owner_id"
+                  name="owner_id"
+                  value={formData.owner_id}
                   onChange={handleInputChange}
                   style={{ 
                     borderLeft: 0,
@@ -418,87 +419,56 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                   }}
                 >
                   <option value="">Select Owner</option>
-                  {teamMembers.map(member => (
-                    <option key={member.id} value={member.id}>{member.name}</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
               </div>
             </div>
             <div className="col-md-6">
-              <label htmlFor="reviewDate" className="form-label d-flex align-items-center">
-                <i className="bi bi-calendar-check me-2" style={{ color: chartColors.primary }}></i>
-                Review Date
-              </label>
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="bi bi-calendar3" style={{ color: chartColors.primary }}></i>
-                </span>
-                <input
-                  type="date"
-                  className="form-control"
-                  id="reviewDate"
-                  name="reviewDate"
-                  value={formData.reviewDate}
-                  onChange={handleInputChange}
-                  style={{ 
-                    borderLeft: 0,
-                    borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                    boxShadow: 'none'
-                  }}
-                />
-              </div>
+              <label htmlFor="review_date" className="form-label">Review Date</label>
+              <input
+                type="date"
+                className="form-control"
+                id="review_date"
+                name="review_date"
+                value={formData.review_date}
+                onChange={handleInputChange}
+              />
             </div>
           </div>
           
           <div className="mb-3">
-            <label htmlFor="mitigationPlan" className="form-label d-flex align-items-center">
-              <i className="bi bi-shield me-2" style={{ color: chartColors.primary }}></i>
-              Mitigation Plan
-            </label>
+            <label htmlFor="mitigation_plan" className="form-label">Mitigation Plan</label>
             <textarea
               className="form-control"
-              id="mitigationPlan"
-              name="mitigationPlan"
+              id="mitigation_plan"
+              name="mitigation_plan"
               rows="2"
-              value={formData.mitigationPlan}
+              value={formData.mitigation_plan}
               onChange={handleInputChange}
               placeholder="Actions to reduce probability or impact of the risk"
-              style={{ 
-                borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                boxShadow: 'none'
-              }}
             ></textarea>
           </div>
           
           <div className="mb-3">
-            <label htmlFor="contingencyPlan" className="form-label d-flex align-items-center">
-              <i className="bi bi-life-preserver me-2" style={{ color: chartColors.primary }}></i>
-              Contingency Plan
-            </label>
+            <label htmlFor="contingency_plan" className="form-label">Contingency Plan</label>
             <textarea
               className="form-control"
-              id="contingencyPlan"
-              name="contingencyPlan"
+              id="contingency_plan"
+              name="contingency_plan"
               rows="2"
-              value={formData.contingencyPlan}
+              value={formData.contingency_plan}
               onChange={handleInputChange}
               placeholder="Actions to take if the risk materializes"
-              style={{ 
-                borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                boxShadow: 'none'
-              }}
             ></textarea>
           </div>
           
           <div className="mb-3">
-            <label className="form-label d-flex align-items-center">
-              <i className="bi bi-bell me-2" style={{ color: chartColors.primary }}></i>
+            <label className="form-label">
               Triggers / Early Warning Signs
             </label>
             <div className="input-group mb-2">
-              <span className="input-group-text bg-light border-end-0">
-                <i className="bi bi-exclamation-diamond" style={{ color: chartColors.tertiary }}></i>
-              </span>
               <input
                 type="text"
                 className="form-control"
@@ -506,35 +476,25 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 value={newTrigger}
                 onChange={(e) => setNewTrigger(e.target.value)}
                 onKeyPress={handleKeyPress}
-                style={{ 
-                  borderLeft: 0,
-                  borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)`,
-                  boxShadow: 'none'
-                }}
               />
               <button
                 type="button"
-                className="btn btn-outline-primary rounded-end"
+                className="btn btn-outline-primary"
                 onClick={handleAddTrigger}
-                style={{ borderColor: `rgba(${safeHexToRgb(chartColors.primary)}, 0.3)` }}
               >
-                <i className="bi bi-plus-lg me-1"></i> Add
+                <i className="bi bi-plus-lg"></i> Add
               </button>
             </div>
             
             {formData.triggers.length > 0 ? (
-              <ul className="list-group" style={{ borderRadius: '0.5rem' }}>
+              <ul className="list-group">
                 {formData.triggers.map((trigger, index) => (
                   <li 
                     key={index} 
                     className="list-group-item d-flex justify-content-between align-items-center"
-                    style={{ 
-                      borderColor: `rgba(${safeHexToRgb(chartColors.quaternary)}, 0.3)`,
-                      backgroundColor: index % 2 === 0 ? `rgba(${safeHexToRgb(chartColors.quaternary)}, 0.05)` : 'transparent'
-                    }}
                   >
-                    <div className="d-flex align-items-center">
-                      <i className="bi bi-arrow-right-circle me-2" style={{ color: chartColors.tertiary }}></i>
+                    <div>
+                      <i className="bi bi-arrow-right-circle me-2"></i>
                       {trigger}
                     </div>
                     <button
@@ -548,15 +508,8 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
                 ))}
               </ul>
             ) : (
-              <div 
-                className="alert py-2" 
-                style={{ 
-                  backgroundColor: `rgba(${safeHexToRgb(chartColors.quaternary)}, 0.1)`,
-                  border: `1px solid rgba(${safeHexToRgb(chartColors.quaternary)}, 0.2)`,
-                  color: chartColors.primary
-                }}
-              >
-                <i className="bi bi-info-circle me-2"></i>
+              <div className="text-muted small">
+                <i className="bi bi-info-circle me-1"></i>
                 No triggers added. Triggers help identify when a risk is about to materialize.
               </div>
             )}
@@ -565,14 +518,28 @@ function RiskForm({ risk, mode = 'create', projectId, onSubmit, onCancel }) {
           <div className="d-flex justify-content-end mt-4">
             <button 
               type="button" 
-              className="btn btn-outline-secondary me-2 rounded-pill"
+              className="btn btn-outline-secondary me-2"
               onClick={onCancel}
+              disabled={isSubmitting}
             >
-              <i className="bi bi-x-lg me-1"></i> Cancel
+              Cancel
             </button>
-            <button type="submit" className="btn btn-primary rounded-pill">
-              <i className={`bi ${mode === 'create' ? 'bi-plus-lg' : 'bi-check-lg'} me-1`}></i>
-              {mode === 'create' ? 'Create Risk' : 'Update Risk'}
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  {risk && risk.id ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                <>
+                  <i className={`bi ${risk && risk.id ? 'bi-check-lg' : 'bi-plus-lg'} me-1`}></i>
+                  {risk && risk.id ? 'Update Risk' : 'Create Risk'}
+                </>
+              )}
             </button>
           </div>
         </form>

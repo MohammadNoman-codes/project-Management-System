@@ -1,48 +1,26 @@
 const express = require('express');
 const router = express.Router();
+const riskController = require('../controllers/riskController');
 
-// GET all risks
-router.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'GET risks endpoint (placeholder)',
-    data: []
-  });
-});
+// Get all risks (with optional project filter)
+router.get('/', riskController.getAllRisks);
 
-// GET a single risk
-router.get('/:id', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: `GET risk with ID ${req.params.id} (placeholder)`,
-    data: {}
-  });
-});
+// Get all risks for a specific project
+router.get('/project/:projectId', riskController.getAllRisks);
 
-// POST create new risk
-router.post('/', (req, res) => {
-  res.status(201).json({
-    status: 'success',
-    message: 'POST risk created (placeholder)',
-    data: req.body
-  });
-});
+// Get risk by ID
+router.get('/:id', riskController.getRiskById);
 
-// PUT update risk
-router.put('/:id', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: `PUT risk with ID ${req.params.id} updated (placeholder)`,
-    data: req.body
-  });
-});
+// Create new risk
+router.post('/', riskController.createRisk);
 
-// DELETE risk
-router.delete('/:id', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: `DELETE risk with ID ${req.params.id} (placeholder)`
-  });
-});
+// Create new risk for a specific project
+router.post('/project/:projectId', riskController.createRisk);
+
+// Update risk
+router.put('/:id', riskController.updateRisk);
+
+// Delete risk
+router.delete('/:id', riskController.deleteRisk);
 
 module.exports = router;

@@ -1,34 +1,60 @@
 const db = require('../config/dbConfig');
 
 class Risk {
-  // Get all risks for a project
+  // Get all risks with optional project filter
   static getAll(projectId, callback) {
-    const query = `
-      SELECT * FROM risks
-      WHERE project_id = ?
-      ORDER BY risk_score DESC
+    let query = `
+      SELECT r.*, u.name as owner_name, u.avatar as owner_avatar 
+      FROM risks r
+      LEFT JOIN users u ON r.owner_id = u.id
     `;
     
-    db.all(query, [projectId], (err, rows) => {
+    const params = [];
+    
+    if (projectId) {
+      query += ` WHERE r.project_id = ?`;
+      params.push(projectId);
+    }
+    
+    query += ` ORDER BY r.risk_score DESC, r.id`;
+    
+    db.all(query, params, (err, rows) => {
       if (err) {
         return callback(err, null);
       }
       
-      // Parse JSON strings to arrays
-      const risks = rows.map(risk => ({
-        ...risk,
-        triggers: JSON.parse(risk.triggers || '[]')
+      // Parse JSON triggers if they exist
+      const risks = rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        category: row.category,
+        probability: row.probability,
+        impact: row.impact,
+        risk_score: row.risk_score,
+        status: row.status,
+        mitigation_plan: row.mitigation_plan,
+        contingency_plan: row.contingency_plan,
+        owner_id: row.owner_id,
+        owner_name: row.owner_name,
+        owner_avatar: row.owner_avatar,
+        triggers: JSON.parse(row.triggers || '[]'),
+        identified_date: row.identified_date,
+        review_date: row.review_date,
+        project_id: row.project_id
       }));
       
       callback(null, risks);
     });
   }
   
-  // Get risk by ID
+  // Get a single risk by ID
   static getById(id, callback) {
     const query = `
-      SELECT * FROM risks
-      WHERE id = ?
+      SELECT r.*, u.name as owner_name, u.avatar as owner_avatar 
+      FROM risks r
+      LEFT JOIN users u ON r.owner_id = u.id
+      WHERE r.id = ?
     `;
     
     db.get(query, [id], (err, row) => {
@@ -40,20 +66,34 @@ class Risk {
         return callback(null, null);
       }
       
-      // Parse JSON strings to arrays
+      // Parse JSON triggers if they exist
       const risk = {
-        ...row,
-        triggers: JSON.parse(row.triggers || '[]')
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        category: row.category,
+        probability: row.probability,
+        impact: row.impact,
+        risk_score: row.risk_score,
+        status: row.status,
+        mitigation_plan: row.mitigation_plan,
+        contingency_plan: row.contingency_plan,
+        owner_id: row.owner_id,
+        owner_name: row.owner_name,
+        owner_avatar: row.owner_avatar,
+        triggers: JSON.parse(row.triggers || '[]'),
+        identified_date: row.identified_date,
+        review_date: row.review_date,
+        project_id: row.project_id
       };
       
       callback(null, risk);
     });
   }
   
-  // Create new risk
+  // Create a new risk
   static create(riskData, callback) {
     const {
-      project_id,
       title,
       description,
       category,
@@ -61,18 +101,17 @@ class Risk {
       impact,
       risk_score,
       status,
-      owner_id,
-      owner_name,
-      identified_date,
       mitigation_plan,
       contingency_plan,
+      owner_id,
       triggers,
-      review_date
+      identified_date,
+      review_date,
+      project_id
     } = riskData;
     
     const query = `
       INSERT INTO risks (
-        project_id,
         title,
         description,
         category,
@@ -80,53 +119,52 @@ class Risk {
         impact,
         risk_score,
         status,
-        owner_id,
-        owner_name,
-        identified_date,
         mitigation_plan,
         contingency_plan,
+        owner_id,
         triggers,
-        review_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        identified_date,
+        review_date,
+        project_id,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `;
+    
+    // Convert triggers array to JSON string if it's not already a string
+    const triggersJson = typeof triggers === 'string' ? 
+      triggers : 
+      JSON.stringify(triggers || []);
     
     db.run(
       query,
       [
-        project_id,
         title,
         description,
         category,
         probability,
         impact,
         risk_score,
-        status,
-        owner_id,
-        owner_name,
-        identified_date,
+        status || 'Identified',
         mitigation_plan,
         contingency_plan,
-        triggers,
-        review_date
+        owner_id,
+        triggersJson,
+        identified_date || new Date().toISOString().split('T')[0],
+        review_date,
+        project_id
       ],
       function(err) {
         if (err) {
           return callback(err, null);
         }
         
-        // Parse triggers back to array for response
-        const responseData = {
-          ...riskData,
-          id: this.lastID,
-          triggers: JSON.parse(triggers || '[]')
-        };
-        
-        callback(null, responseData);
+        // Get the created risk with owner details
+        Risk.getById(this.lastID, callback);
       }
     );
   }
   
-  // Update risk
+  // Update an existing risk
   static update(id, riskData, callback) {
     // Build SET clause and parameters array dynamically based on provided data
     const updateFields = [];

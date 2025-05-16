@@ -51,33 +51,30 @@ exports.getRiskById = (req, res) => {
 
 // Create new risk
 exports.createRisk = (req, res) => {
-  const { projectId } = req.params;
-  
   // Validate request
-  if (!req.body.title) {
+  if (!req.body.title || !req.body.project_id) {
     return res.status(400).json({
       status: 'fail',
-      message: 'Risk title is required'
+      message: 'Risk title and project ID are required'
     });
   }
   
-  // Create risk object
+  // Create risk object from request body
   const riskData = {
-    project_id: projectId,
     title: req.body.title,
     description: req.body.description,
     category: req.body.category,
     probability: req.body.probability,
     impact: req.body.impact,
-    risk_score: req.body.probability * req.body.impact,
+    risk_score: req.body.risk_score || (req.body.probability * req.body.impact),
     status: req.body.status || 'Identified',
-    owner_id: req.body.owner_id,
-    owner_name: req.body.owner_name,
-    identified_date: req.body.identified_date,
     mitigation_plan: req.body.mitigation_plan,
     contingency_plan: req.body.contingency_plan,
-    triggers: JSON.stringify(req.body.triggers || []),
-    review_date: req.body.review_date
+    owner_id: req.body.owner_id,
+    triggers: req.body.triggers,
+    identified_date: req.body.identified_date,
+    review_date: req.body.review_date,
+    project_id: req.body.project_id
   };
   
   Risk.create(riskData, (err, data) => {
@@ -109,17 +106,22 @@ exports.updateRisk = (req, res) => {
     });
   }
   
-  // Update risk score if probability or impact were updated
-  let riskScore = req.body.risk_score;
-  if (req.body.probability !== undefined && req.body.impact !== undefined) {
-    riskScore = req.body.probability * req.body.impact;
-  }
-  
-  // Create risk object with updated data
+  // Update risk object from request body
   const riskData = {
-    ...req.body,
-    risk_score: riskScore,
-    triggers: req.body.triggers ? JSON.stringify(req.body.triggers) : undefined
+    title: req.body.title,
+    description: req.body.description,
+    category: req.body.category,
+    probability: req.body.probability,
+    impact: req.body.impact,
+    risk_score: req.body.risk_score || (req.body.probability * req.body.impact),
+    status: req.body.status,
+    mitigation_plan: req.body.mitigation_plan,
+    contingency_plan: req.body.contingency_plan,
+    owner_id: req.body.owner_id,
+    triggers: req.body.triggers,
+    identified_date: req.body.identified_date,
+    review_date: req.body.review_date,
+    project_id: req.body.project_id
   };
   
   Risk.update(id, riskData, (err, data) => {

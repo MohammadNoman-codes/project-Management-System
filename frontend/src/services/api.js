@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-// Make sure this points to your actual backend API
-// If in development, it should typically be http://localhost:portnumber/api
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Create axios instance with defaults
@@ -15,9 +13,6 @@ const api = axios.create({
 // Add a request interceptor for authentication
 api.interceptors.request.use(
   (config) => {
-    // For debugging
-    console.log(`API Request: ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
-    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -29,39 +24,13 @@ api.interceptors.request.use(
 
 // Add a response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
-    // For debugging
-    console.log(`API Response from ${response.config.url}: Status ${response.status}`);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Enhanced error logging
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('API Error Response:', {
-        status: error.response.status,
-        url: error.config?.url,
-        data: error.response.data,
-        headers: error.response.headers
-      });
-      
-      // Handle session expiration or authentication errors
-      if (error.response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      }
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('API No Response:', {
-        request: error.request,
-        url: error.config?.url
-      });
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error('API Request Error:', error.message);
+    // Handle session expiration or authentication errors
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
     }
-    
     return Promise.reject(error);
   }
 );
@@ -73,23 +42,17 @@ export const projectApi = {
   getWithDetails: (id) => api.get(`/projects/${id}/details`),
   create: (data) => api.post('/projects', data),
   update: (id, data) => api.put(`/projects/${id}`, data),
-  delete: (id) => api.delete(`/projects/${id}`),
-  // Add these new endpoints
-  addTeamMember: (projectId, teamMemberData) => api.post(`/projects/${projectId}/team`, teamMemberData),
-  removeTeamMember: (projectId, teamMemberId) => api.delete(`/projects/${projectId}/team/${teamMemberId}`)
+  delete: (id) => api.delete(`/projects/${id}`)
 };
 
 // Tasks API
 export const taskApi = {
-  getAll: (projectId) => {
-    const url = projectId ? `/projects/${projectId}/tasks` : '/tasks';
-    return api.get(url);
-  },
+  getAll: (projectId) => api.get('/tasks', { params: { projectId } }),
   getById: (id) => api.get(`/tasks/${id}`),
   create: (data) => api.post('/tasks', data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
-  updateStatus: (id, data) => api.patch(`/tasks/${id}/status`, data),
   delete: (id) => api.delete(`/tasks/${id}`),
+  // Add the upload method
   uploadFile: (id, formData) => api.post(`/tasks/${id}/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -155,6 +118,15 @@ export const analyticsApi = {
     api.get('/analytics/completion-forecast', { params: { projectId } })
 };
 
+// Users API
+export const userApi = {
+  getAll: () => api.get('/users'),
+  getById: (id) => api.get(`/users/${id}`),
+  create: (data) => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`)
+};
+
 export default {
   projectApi,
   taskApi,
@@ -163,5 +135,6 @@ export default {
   budgetApi,
   stakeholderApi,
   riskApi,
-  analyticsApi
+  analyticsApi,
+  userApi
 };

@@ -8,6 +8,7 @@ import TaskPage from './components/TaskPage';
 import ResourcePage from './components/resources/ResourcePage';
 import ReportingDashboard from './components/reporting/ReportingDashboard';
 import RiskManagement from './components/risk/RiskManagement';
+import RiskManagementPage from './components/risk/RiskManagementPage';
 import DocumentRepository from './components/documents/DocumentRepository';
 import StakeholderManagement from './components/stakeholders/StakeholderManagement';
 import AnalyticsPage from './components/analytics/AnalyticsPage';
@@ -33,8 +34,8 @@ function App() {
             <Route path="/tasks/:taskId" component={TaskPage} />
             <Route exact path="/resources" component={ResourcePage} />
             <Route path="/projects/:projectId/resources" component={ResourcePage} />
-            <Route path="/projects/:projectId/risks" component={RiskManagement} />
-            <Route exact path="/risks" component={RiskManagement} />
+            <Route path="/projects/:projectId/risks" component={RiskManagementPage} />
+            <Route exact path="/risks" component={RiskManagementPage} />
             <Route path="/risks/:projectId" component={RiskManagement} />
             <Route path="/projects/:projectId/documents" component={DocumentRepository} />
             <Route path="/projects/:projectId/stakeholders" component={StakeholderManagement} />

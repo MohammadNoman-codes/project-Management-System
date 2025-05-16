@@ -9,7 +9,9 @@ const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const resourceRoutes = require('./routes/resourceRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes'); // Add this line
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const riskRoutes = require('./routes/riskRoutes');
+const userRoutes = require('./routes/userRoutes'); // Add this line
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,7 +30,9 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api/dashboard', dashboardRoutes); // Add this line
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/risks', riskRoutes);
+app.use('/api/users', userRoutes); // Add this line
 
 // Root route
 app.get('/', (req, res) => {

@@ -2,20 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import RiskList from './RiskList';
 import RiskForm from './RiskForm';
+import RiskMatrix from './RiskMatrix';
 import riskService from '../../services/riskService';
 import projectService from '../../services/projectService';
-import userService from '../../services/userService'; // Import userService
+import userService from '../../services/userService';
 
 function RiskManagementPage() {
   const { projectId } = useParams();
   const [risks, setRisks] = useState([]);
   const [project, setProject] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [users, setUsers] = useState([]); // Add state for users
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showRiskForm, setShowRiskForm] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState(null);
+  const [activeTab, setActiveTab] = useState('list'); // New state for tracking active tab
   const [filter, setFilter] = useState({
     category: 'all',
     status: 'all',
@@ -23,7 +25,7 @@ function RiskManagementPage() {
     project: 'all'
   });
   
-  // Fetch risks, projects, and users data
+  // Fetch risks and project data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -217,24 +219,57 @@ function RiskManagementPage() {
         </div>
       </div>
       
+      {/* Tab Navigation */}
+      {!showRiskForm && (
+        <ul className="nav nav-tabs mb-4">
+          <li className="nav-item">
+            <button 
+              className={`nav-link ${activeTab === 'list' ? 'active' : ''}`}
+              onClick={() => setActiveTab('list')}
+            >
+              <i className="bi bi-list-ul me-1"></i> Risk List
+            </button>
+          </li>
+          <li className="nav-item">
+            <button 
+              className={`nav-link ${activeTab === 'matrix' ? 'active' : ''}`}
+              onClick={() => setActiveTab('matrix')}
+            >
+              <i className="bi bi-grid-3x3 me-1"></i> Risk Matrix
+            </button>
+          </li>
+        </ul>
+      )}
+      
       {showRiskForm ? (
         <RiskForm 
           risk={selectedRisk}
           projectId={projectId}
           projects={projects}
-          users={users} // Pass users array to RiskForm
+          users={users}
           onSubmit={handleRiskSubmit}
           onCancel={() => setShowRiskForm(false)}
         />
       ) : (
-        <RiskList 
-          risks={filteredRisks}
-          onEdit={handleEditRisk}
-          onDelete={handleDeleteRisk}
-          filter={filter}
-          onFilterChange={handleFilterChange}
-          projects={projects}  
-        />
+        <>
+          {activeTab === 'list' && (
+            <RiskList 
+              risks={filteredRisks}
+              onEdit={handleEditRisk}
+              onDelete={handleDeleteRisk}
+              filter={filter}
+              onFilterChange={handleFilterChange}
+              projects={projects}  
+            />
+          )}
+          
+          {activeTab === 'matrix' && (
+            <RiskMatrix 
+              risks={filteredRisks} 
+              onRiskClick={handleEditRisk} 
+            />
+          )}
+        </>
       )}
     </div>
   );

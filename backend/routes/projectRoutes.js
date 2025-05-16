@@ -23,4 +23,8 @@ router.put('/:id', projectController.updateProject);
 // DELETE project
 router.delete('/:id', projectController.deleteProject);
 
+// Team member routes
+router.post('/:id/team', projectController.addTeamMember);
+router.delete('/:id/team/:memberId', projectController.removeTeamMember);
+
 module.exports = router;

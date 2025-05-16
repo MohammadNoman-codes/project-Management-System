@@ -73,7 +73,10 @@ export const projectApi = {
   getWithDetails: (id) => api.get(`/projects/${id}/details`),
   create: (data) => api.post('/projects', data),
   update: (id, data) => api.put(`/projects/${id}`, data),
-  delete: (id) => api.delete(`/projects/${id}`)
+  delete: (id) => api.delete(`/projects/${id}`),
+  // Add these new endpoints
+  addTeamMember: (projectId, teamMemberData) => api.post(`/projects/${projectId}/team`, teamMemberData),
+  removeTeamMember: (projectId, teamMemberId) => api.delete(`/projects/${projectId}/team/${teamMemberId}`)
 };
 
 // Tasks API

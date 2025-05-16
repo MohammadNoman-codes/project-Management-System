@@ -78,6 +78,7 @@ function ProjectPage() {
   const [loading, setLoading] = useState(false);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
+  const [processingAction, setProcessingAction] = useState(false);
   
   // Toggle milestone expansion
   const toggleMilestone = (milestoneId) => {
@@ -140,7 +141,7 @@ function ProjectPage() {
   };
   
   // Handle adding a team member
-  const handleAddTeamMember = () => {
+  const handleAddTeamMember = async () => {
     // Validate inputs
     if (!newTeamMember.name || !newTeamMember.role) {
       alert('Please fill in all required fields');
@@ -148,36 +149,62 @@ function ProjectPage() {
     }
     
     // Create a new team member with a unique ID
-    const newMember = {
-      id: Date.now(),
+    const teamMemberData = {
       name: newTeamMember.name,
       role: newTeamMember.role,
-      email: newTeamMember.email,
-      avatar: 'https://via.placeholder.com/40' // Placeholder avatar
+      email: newTeamMember.email
     };
     
-    // Update project with new team member
-    setProject(prev => ({
-      ...prev,
-      team: [...(prev.team || []), newMember]
-    }));
-    
-    // Reset form and close modal
-    setNewTeamMember({
-      name: '',
-      role: 'Team Member',
-      email: ''
-    });
-    setShowAddTeamModal(false);
+    try {
+      setProcessingAction(true); // Add this state variable if not already present
+      
+      // Save to database via API
+      const addedMember = await projectService.addTeamMember(id, teamMemberData);
+      
+      // Update project with new team member
+      setProject(prev => ({
+        ...prev,
+        team: [...(prev.team || []), addedMember]
+      }));
+      
+      // Reset form and close modal
+      setNewTeamMember({
+        name: '',
+        role: 'Team Member',
+        email: ''
+      });
+      setShowAddTeamModal(false);
+      setProcessingAction(false);
+      
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      alert(`Failed to add team member: ${error.message || 'Unknown error'}`);
+      setProcessingAction(false);
+    }
   };
   
   // Handle removing a team member
-  const handleRemoveTeamMember = (memberId) => {
+  const handleRemoveTeamMember = async (memberId) => {
     if (window.confirm('Are you sure you want to remove this team member?')) {
-      setProject(prev => ({
-        ...prev,
-        team: prev.team.filter(member => member.id !== memberId)
-      }));
+      try {
+        setProcessingAction(true);
+        
+        // Remove from database via API
+        await projectService.removeTeamMember(id, memberId);
+        
+        // Update local state
+        setProject(prev => ({
+          ...prev,
+          team: prev.team.filter(member => member.id !== memberId)
+        }));
+        
+        setProcessingAction(false);
+        
+      } catch (error) {
+        console.error('Error removing team member:', error);
+        alert(`Failed to remove team member: ${error.message || 'Unknown error'}`);
+        setProcessingAction(false);
+      }
     }
   };
   
@@ -1315,6 +1342,7 @@ function ProjectPage() {
                   type="button" 
                   className="btn btn-outline-secondary rounded-pill"
                   onClick={() => setShowAddTeamModal(false)}
+                  disabled={processingAction}
                 >
                   Cancel
                 </button>
@@ -1323,9 +1351,29 @@ function ProjectPage() {
                   className="btn btn-primary rounded-pill"
                   onClick={handleAddTeamMember}
                   style={{ backgroundColor: purpleColors.primary, borderColor: purpleColors.primary }}
+                  disabled={processingAction}
                 >
-                  Add Member
+                  {processingAction ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-person-plus me-1"></i> Add Member
+                    </>
+                  )}
                 </button>
+
+
+
+
+
+
+
+
+
+
               </div>
             </div>
           </div>

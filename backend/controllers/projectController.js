@@ -224,3 +224,63 @@ exports.getProjectWithDetails = (req, res) => {
     });
   });
 };
+
+// Add a team member to a project
+exports.addTeamMember = (req, res) => {
+  const { id } = req.params;
+  const teamMemberData = req.body;
+  
+  // Validate request body
+  if (!teamMemberData.name || !teamMemberData.role) {
+    return res.status(400).json({
+      status: 'fail',
+      message: 'Name and role are required fields'
+    });
+  }
+  
+  // Call the model method to add the team member
+  Project.addTeamMember(id, teamMemberData, (err, data) => {
+    if (err) {
+      console.error(`Error adding team member to project ${id}:`, err);
+      return res.status(500).json({
+        status: 'error',
+        message: `Error adding team member to project ${id}`,
+        error: err.message
+      });
+    }
+    
+    res.status(201).json({
+      status: 'success',
+      data
+    });
+  });
+};
+
+// Remove a team member from a project
+exports.removeTeamMember = (req, res) => {
+  const { id, memberId } = req.params;
+  
+  // Call the model method to remove the team member
+  Project.removeTeamMember(id, memberId, (err, data) => {
+    if (err) {
+      console.error(`Error removing team member ${memberId} from project ${id}:`, err);
+      return res.status(500).json({
+        status: 'error',
+        message: `Error removing team member from project`,
+        error: err.message
+      });
+    }
+    
+    if (!data.deleted) {
+      return res.status(404).json({
+        status: 'fail',
+        message: `Team member with ID ${memberId} not found in project ${id}`
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      message: `Team member removed successfully`
+    });
+  });
+};

@@ -438,6 +438,135 @@ class Project {
       });
     });
   }
+  
+  // Add team member to project
+  static addTeamMember(projectId, teamMemberData, callback) {
+    // First, check if the project exists
+    db.get(`SELECT * FROM projects WHERE id = ?`, [projectId], (err, project) => {
+      if (err) {
+        return callback(err, null);
+      }
+      
+      if (!project) {
+        return callback(new Error(`Project with ID ${projectId} not found`), null);
+      }
+      
+      // Check if the user already exists in the database
+      db.get(
+        `SELECT id FROM users WHERE name = ? AND email = ?`,
+        [teamMemberData.name, teamMemberData.email || ''],
+        (err, existingUser) => {
+          if (err) {
+            return callback(err, null);
+          }
+          
+          let userId;
+          
+          // Function to add user to project_team table
+          const addToProjectTeam = (userId) => {
+            const query = `
+              INSERT INTO project_team (
+                project_id,
+                user_id,
+                role
+              ) VALUES (?, ?, ?)
+            `;
+            
+            db.run(
+              query,
+              [
+                projectId,
+                userId,
+                teamMemberData.role
+              ],
+              function(err) {
+                if (err) {
+                  return callback(err, null);
+                }
+                
+                // Get the complete user data to return
+                db.get(
+                  `SELECT u.*, pt.role FROM users u 
+                   JOIN project_team pt ON u.id = pt.user_id 
+                   WHERE u.id = ? AND pt.project_id = ?`,
+                  [userId, projectId],
+                  (err, userData) => {
+                    if (err) {
+                      return callback(err, null);
+                    }
+                    
+                    // Return the created team member with its ID
+                    const teamMember = {
+                      id: this.lastID, // project_team entry ID
+                      name: userData.name,
+                      email: userData.email,
+                      role: userData.role,
+                      avatar: userData.avatar || 'https://via.placeholder.com/40' // Default avatar
+                    };
+                    
+                    callback(null, teamMember);
+                  }
+                );
+              }
+            );
+          };
+          
+          if (existingUser) {
+            // If user exists, just add them to the project_team table
+            addToProjectTeam(existingUser.id);
+          } else {
+            // If user doesn't exist, create a new user first
+            const createUserQuery = `
+              INSERT INTO users (
+                name,
+                email,
+                avatar,
+                department,
+                role
+              ) VALUES (?, ?, ?, ?, ?)
+            `;
+            
+            db.run(
+              createUserQuery,
+              [
+                teamMemberData.name,
+                teamMemberData.email || null,
+                'https://via.placeholder.com/40', // Default avatar
+                teamMemberData.department || 'General', // Default department
+                teamMemberData.role || 'Team Member' // Use the role from teamMemberData or default to 'Team Member'
+              ],
+              function(err) {
+                if (err) {
+                  return callback(err, null);
+                }
+                
+                // Get the new user ID and add to project_team
+                const newUserId = this.lastID;
+                addToProjectTeam(newUserId);
+              }
+            );
+          }
+        }
+      );
+    });
+  }
+  
+  // Remove team member from project
+  static removeTeamMember(projectId, memberId, callback) {
+    // Note: In this case, memberId refers to the project_team entry ID
+    const query = `
+      DELETE FROM project_team 
+      WHERE id = ? AND project_id = ?
+    `;
+    
+    db.run(query, [memberId, projectId], function(err) {
+      if (err) {
+        return callback(err, null);
+      }
+      
+      callback(null, { id: memberId, deleted: this.changes > 0 });
+    });
+  }
 }
 
 module.exports = Project;

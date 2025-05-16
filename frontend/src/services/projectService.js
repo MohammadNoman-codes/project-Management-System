@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { projectApi } from './api';  // Add this import
 
 // Create API instance with base URL
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -208,6 +209,53 @@ const projectService = {
   },
   
   createProjectWithDetails,
+
+  // Add team member to project
+  addTeamMember: async (projectId, teamMemberData) => {
+    try {
+      console.log(`Adding team member to project ID: ${projectId}`, teamMemberData);
+      const response = await projectApi.addTeamMember(projectId, teamMemberData);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in addTeamMember:', error);
+      
+      // // Fallback to mock data if API fails
+      // console.log('Falling back to mock data for adding team member');
+      // const mockProject = mockProjects.find(p => p.id === projectId);
+      // if (mockProject) {
+      //   const newMember = {
+      //     id: Date.now(),
+      //     ...teamMemberData,
+      //     avatar: 'https://via.placeholder.com/40'
+      //   };
+      //   mockProject.team.push(newMember);
+      //   return newMember;
+      // }
+      
+      throw error;
+    }
+  },
+
+  // Remove team member from project
+  removeTeamMember: async (projectId, teamMemberId) => {
+    try {
+      console.log(`Removing team member ${teamMemberId} from project ID: ${projectId}`);
+      const response = await projectApi.removeTeamMember(projectId, teamMemberId);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in removeTeamMember:', error);
+      
+      // Fallback to mock data if API fails
+      console.log('Falling back to mock data for removing team member');
+      const mockProject = mockProjects.find(p => p.id === projectId);
+      if (mockProject) {
+        mockProject.team = mockProject.team.filter(member => member.id !== teamMemberId);
+        return { success: true };
+      }
+      
+      throw error;
+    }
+  },
 };
 
 export default projectService;

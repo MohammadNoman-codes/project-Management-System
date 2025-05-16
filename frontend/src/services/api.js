@@ -76,7 +76,7 @@ export const projectApi = {
   delete: (id) => api.delete(`/projects/${id}`)
 };
 
-// Tasks API - Ensure endpoints match your backend API
+// Tasks API
 export const taskApi = {
   getAll: (projectId) => {
     const url = projectId ? `/projects/${projectId}/tasks` : '/tasks';
@@ -85,6 +85,7 @@ export const taskApi = {
   getById: (id) => api.get(`/tasks/${id}`),
   create: (data) => api.post('/tasks', data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
+  updateStatus: (id, data) => api.patch(`/tasks/${id}/status`, data),
   delete: (id) => api.delete(`/tasks/${id}`),
   uploadFile: (id, formData) => api.post(`/tasks/${id}/upload`, formData, {
     headers: {

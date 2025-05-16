@@ -55,4 +55,7 @@ router.post('/:id/files', (req, res) => {
   });
 });
 
+// Add this new route
+router.patch('/:id/status', taskController.updateTaskStatus);
+
 module.exports = router;

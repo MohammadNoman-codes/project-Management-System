@@ -120,6 +120,36 @@ exports.updateTask = (req, res) => {
   });
 };
 
+// Update task status only
+exports.updateTaskStatus = (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  // Validate request
+  if (!status) {
+    return res.status(400).json({
+      status: 'fail',
+      message: 'Status is required'
+    });
+  }
+  
+  Task.updateStatus(id, status, (err, data) => {
+    if (err) {
+      console.error(`Error updating task status with ID ${id}:`, err);
+      return res.status(500).json({
+        status: 'error',
+        message: `Error updating task status with ID ${id}`,
+        error: err.message
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data
+    });
+  });
+};
+
 // Delete task
 exports.deleteTask = (req, res) => {
   const { id } = req.params;

@@ -151,6 +151,28 @@ class Task {
     );
   }
   
+  // Update only the task status
+  static updateStatus(id, status, callback) {
+    const query = `
+      UPDATE tasks 
+      SET status = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    
+    db.run(query, [status, id], function(err) {
+      if (err) {
+        return callback(err, null);
+      }
+      
+      if (this.changes === 0) {
+        return callback(new Error(`Task with ID ${id} not found`), null);
+      }
+      
+      callback(null, { id, status, updated: true });
+    });
+  }
+  
   // Update task
   static update(id, taskData, callback) {
     const {

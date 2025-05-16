@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useHistory, Link } from 'react-router-dom';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+// Remove this import
+// import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import ProjectBudget from './ProjectBudget';
 import GanttChart from './GanttChart';
 import AnalyticsPage from './analytics/AnalyticsPage';
@@ -75,6 +76,9 @@ function ProjectPage() {
   const [ganttViewMode, setGanttViewMode] = useState('Week');
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [draggedTask, setDraggedTask] = useState(null);
+  const [dragOverColumn, setDragOverColumn] = useState(null);
+  
   // Toggle milestone expansion
   const toggleMilestone = (milestoneId) => {
     setExpandedMilestones(prev => ({
@@ -299,86 +303,113 @@ function ProjectPage() {
     // Update task progress logic
   };
   
-  // Handle drag end for board view
-  const onDragEnd = async (result) => {
-    console.log('Drag end result:', result); // Debug logging
-    const { destination, source, draggableId } = result;
+  // Replace the onDragEnd function with individual drag event handlers
+  const handleDragStart = (e, task) => {
+    // Set the dragged task
+    setDraggedTask(task);
+    
+    // Set drag effect and data
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+    
+    // Add a class to the dragged element for visual feedback
+    if (e.target.classList) {
+      setTimeout(() => {
+        e.target.classList.add('task-being-dragged');
+      }, 0);
+    }
+  };
   
-    // If there's no destination or the item was dropped back in the same place, do nothing
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
+  const handleDragOver = (e, columnName) => {
+    e.preventDefault(); // Allow drop
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Update the column being dragged over for visual feedback
+    if (dragOverColumn !== columnName) {
+      setDragOverColumn(columnName);
+    }
+  };
+  
+  const handleDragEnter = (e, columnName) => {
+    e.preventDefault(); // Allow drop
+    setDragOverColumn(columnName);
+  };
+  
+  const handleDragLeave = (e) => {
+    // Check if we're leaving the column (not just moving between tasks)
+    if (e.currentTarget.contains(e.relatedTarget)) {
       return;
     }
+    
+    // Reset drag over column
+    setDragOverColumn(null);
+  };
   
-    // Extract the actual task ID from the draggableId (removing the 'task-' prefix)
-    const taskId = draggableId.replace('task-', '');
-    console.log('Extracted taskId:', taskId); // Debug logging
+  const handleDrop = async (e, targetColumnName) => {
+    e.preventDefault();
     
-    // Find the task that was dragged
-    const draggedTask = tasks.find(task => String(task.id) === taskId);
-    console.log('Found draggedTask:', draggedTask); // Debug logging
+    // Reset the drag over column
+    setDragOverColumn(null);
     
-    if (!draggedTask) {
-      console.error(`Could not find task with id: ${taskId}`);
+    // If no task is being dragged or it's dropped in the same column, do nothing
+    if (!draggedTask || draggedTask.status === targetColumnName) {
       return;
     }
     
-    // Determine the new status based on destination column
-    const newStatus = destination.droppableId === 'Completed' ? 'Completed' : 
-                       destination.droppableId === 'In Progress' ? 'In Progress' : 
-                       destination.droppableId === 'Review' ? 'Review' : 'To Do';
-  
-    // Update the task's column status locally first (optimistic update)
-    const updatedTasks = tasks.map(task => {
-      if (String(task.id) === taskId) {
-        return {
-          ...task,
-          columnStatus: destination.droppableId,
-          status: newStatus
-        };
-      }
-      return task;
-    });
+    // Get the task ID from dataTransfer
+    const taskId = e.dataTransfer.getData('text/plain');
     
-    // Update the tasks state
-    setTasks(updatedTasks);
+    // Optimistic update - update the task status in the UI first
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        String(task.id) === taskId 
+          ? { ...task, status: targetColumnName, columnStatus: targetColumnName, isUpdating: true }
+          : task
+      )
+    );
     
-    // Now update the database
     try {
-      // Create task update data
-      const taskUpdateData = {
-        status: newStatus
-      };
+      // Use the new dedicated status update method instead of the full update
+      await taskService.updateTaskStatus(taskId, targetColumnName);
       
-      // Call API to update task status
-      await taskService.updateTask(draggedTask.id, taskUpdateData);
+      // Update the task status to reflect the change
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          String(task.id) === taskId 
+            ? { ...task, status: targetColumnName, columnStatus: targetColumnName, isUpdating: false }
+            : task
+        )
+      );
       
-      // If the project milestones contain this task, update that too
-      if (project && project.milestones) {
-        const updatedMilestones = project.milestones.map(milestone => {
-          const updatedTasks = milestone.tasks?.map(task => {
-            if (String(task.id) === taskId) {
-              return { ...task, status: newStatus };
-            }
-            return task;
-          }) || [];
-          
-          return { ...milestone, tasks: updatedTasks };
-        });
-        
-        // Update the project with updated milestone tasks
-        setProject(prev => ({ ...prev, milestones: updatedMilestones }));
-      }
-      
-      // Show a success notification
-      console.log(`Task status updated to: ${newStatus}`);
-      
+      console.log(`Task moved to ${targetColumnName}`);
     } catch (error) {
-      console.error('Error updating task status in database:', error);
+      console.error('Error updating task status:', error);
+      
       // Revert the optimistic update if the API call fails
-      setTasks(tasks);
-      alert('Failed to update task status. Please try again.');
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          String(task.id) === taskId 
+            ? { ...task, status: draggedTask.status, columnStatus: draggedTask.status, isUpdating: false }
+            : task
+        )
+      );
+      
+      alert(`Failed to update task status: ${error.message || 'Unknown error'}`);
+    } finally {
+      // Reset the dragged task
+      setDraggedTask(null);
+    }
+  };
+  
+  const handleDragEnd = (e) => {
+    // Remove drag visual feedback
+    if (e.target.classList) {
+      e.target.classList.remove('task-being-dragged');
+    }
+    
+    // If the drop didn't happen in a valid drop target, reset the dragged task
+    if (!dragOverColumn) {
+      setDraggedTask(null);
     }
   };
   
@@ -563,7 +594,10 @@ function ProjectPage() {
     if (!tasks || !Array.isArray(tasks)) {
       return [];
     }
-    return tasks.filter(task => task && task.columnStatus === columnName);
+    // Return tasks that match the column name either in columnStatus or status field
+    return tasks.filter(task => 
+      task && (task.columnStatus === columnName || task.status === columnName)
+    );
   };
   // Function to get appropriate status colors
   const getStatusColor = (status) => {
@@ -597,6 +631,16 @@ function ProjectPage() {
       case 'Designer': return purpleColors.accent2;
       case 'QA Engineer': return purpleColors.accent3;
       default: return purpleColors.quinary;
+    }
+  };
+
+  // Function to get priority color
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'High': return purpleColors.accent3;
+      case 'Medium': return purpleColors.accent2;
+      case 'Low': return purpleColors.tertiary;
+      default: return purpleColors.quaternary;
     }
   };
 
@@ -860,11 +904,26 @@ function ProjectPage() {
       
       {/* Board view */}
       {activeView === 'board' && (
-        <DragDropContext onDragEnd={onDragEnd}>
+        <div className="kanban-board-container">
           <div className="row g-4">
             {boardColumns.map((columnName) => (
-              <div className="col-md-3" key={columnName}>
-                <div className="dashboard-card">
+              <div 
+                className="col-md-3" 
+                key={columnName}
+                onDragEnter={(e) => handleDragEnter(e, columnName)}
+                onDragOver={(e) => handleDragOver(e, columnName)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, columnName)}
+              >
+                <div 
+                  className={`dashboard-card h-100 ${dragOverColumn === columnName ? 'kanban-column-drag-over' : ''}`}
+                  style={{
+                    transition: 'background-color 0.2s ease',
+                    backgroundColor: dragOverColumn === columnName 
+                      ? `rgba(${safeHexToRgb(getStatusColor(columnName))}, 0.05)` 
+                      : ''
+                  }}
+                >
                   <div className="card-header" style={{ 
                     backgroundColor: `rgba(${safeHexToRgb(getStatusColor(columnName))}, 0.1)` 
                   }}>
@@ -874,92 +933,92 @@ function ProjectPage() {
                         columnName === 'In Progress' ? 'bi-arrow-repeat' : 
                         columnName === 'Review' ? 'bi-eye' : 'bi-list-check'
                       } me-2`}></i>
-                      {columnName} {getTasksByColumn(columnName).length > 0 && `(${getTasksByColumn(columnName).length})`}
+                      {columnName} ({getTasksByColumn(columnName).length})
                     </h6>
                   </div>
-                  <Droppable droppableId={columnName}>
-                    {(provided) => (
+                  <div 
+                    className="card-body kanban-column" 
+                    style={{ minHeight: '500px', padding: '0.75rem' }}
+                  >
+                    {getTasksByColumn(columnName).map((task, index) => (
                       <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className="card-body"
-                        style={{ minHeight: '400px', padding: '0.75rem' }}
+                        key={task.id}
+                        className={`card mb-3 kanban-task ${draggedTask && draggedTask.id === task.id ? 'task-being-dragged' : ''}`}
+                        draggable="true"
+                        onDragStart={(e) => handleDragStart(e, task)}
+                        onDragEnd={handleDragEnd}
+                        style={{
+                          borderLeft: `4px solid ${getStatusColor(task.status)}`,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                          opacity: task.isUpdating ? 0.7 : 1,
+                          cursor: 'grab'
+                        }}
                       >
-                        {getTasksByColumn(columnName).length > 0 ? (
-                          getTasksByColumn(columnName).map((task, index) => {
-                            // Ensure taskId is consistently a string
-                            const taskId = String(task.id);
-                            
-                            // Create a consistent draggableId
-                            const draggableId = `task-${taskId}`;
-                            
-                            return (
-                              <Draggable
-                                key={draggableId}
-                                draggableId={draggableId}
-                                index={index}
-                              >
-                                {(provided) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className="card mb-3"
-                                    style={{
-                                      borderLeft: `4px solid ${getStatusColor(task.status)}`,
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                                      ...provided.draggableProps.style
-                                    }}
-                                  >
-                                    <div className="card-body p-3">
-                                      <div className="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 className="card-title mb-0">{task.name}</h6>
-                                        <span className="badge" style={{ backgroundColor: getStatusColor(task.status), fontSize: '0.65rem' }}>
-                                          {task.status}
-                                        </span>
-                                      </div>
-                                      <p className="text-muted small mb-2">
-                                        <i className="bi bi-flag me-1"></i> {task.milestone}
-                                      </p>
-                                      <p className="text-muted small mb-2">
-                                        <i className="bi bi-calendar-event me-1"></i> Due: {task.dueDate || task.due_date}
-                                      </p>
-                                      <div className="d-flex align-items-center">
-                                        <div className="avatar-circle me-2" style={{ 
-                                          backgroundColor: `rgba(${safeHexToRgb(purpleColors.primary)}, 0.1)`,
-                                          color: purpleColors.primary,
-                                          width: '24px',
-                                          height: '24px',
-                                          borderRadius: '50%',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          fontSize: '0.7rem'
-                                        }}>
-                                          {task.assignedTo?.name ? task.assignedTo.name.charAt(0) : '?'}
-                                        </div>
-                                        <small className="text-muted">{task.assignedTo?.name || 'Unassigned'}</small>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </Draggable>
-                            );
-                          })
-                        ) : (
-                          <div className="text-center p-3">
-                            <p className="text-muted small">No tasks in this column</p>
+                        <div className="card-body p-3">
+                          <div className="d-flex justify-content-between align-items-start mb-2">
+                            <h6 className="card-title mb-0">{task.name}</h6>
+                            <div>
+                              {task.isUpdating && (
+                                <div className="spinner-border spinner-border-sm text-secondary me-2" 
+                                     role="status" style={{ width: '0.9rem', height: '0.9rem' }}>
+                                  <span className="visually-hidden">Updating...</span>
+                                </div>
+                              )}
+                              <span className="badge" 
+                                    style={{ backgroundColor: getStatusColor(task.status), fontSize: '0.65rem' }}>
+                                {task.status}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                        {provided.placeholder}
+                          
+                          <p className="text-muted small mb-2">
+                            <i className="bi bi-flag me-1"></i> {task.milestone}
+                          </p>
+                          
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                            <p className="text-muted small mb-0">
+                              <i className="bi bi-calendar-event me-1"></i> 
+                              Due: {task.dueDate || task.due_date}
+                            </p>
+                            
+                            <span className="badge" 
+                                  style={{ backgroundColor: getPriorityColor(task.priority), fontSize: '0.65rem' }}>
+                              {task.priority}
+                            </span>
+                          </div>
+                          
+                          <div className="d-flex align-items-center mt-2">
+                            <div className="avatar-circle me-2" style={{ 
+                              backgroundColor: `rgba(${safeHexToRgb(purpleColors.primary)}, 0.1)`,
+                              color: purpleColors.primary,
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.7rem'
+                            }}>
+                              {task.assignedTo?.name ? task.assignedTo.name.charAt(0) : '?'}
+                            </div>
+                            <small className="text-muted">{task.assignedTo?.name || 'Unassigned'}</small>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {getTasksByColumn(columnName).length === 0 && (
+                      <div className="empty-column text-center p-4">
+                        <i className="bi bi-inbox text-muted" style={{ fontSize: '2rem', opacity: 0.3 }}></i>
+                        <p className="text-muted small mt-2">Drop tasks here</p>
                       </div>
                     )}
-                  </Droppable>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </DragDropContext>
+        </div>
       )}
       
       {/* List view */}
@@ -1027,11 +1086,11 @@ function ProjectPage() {
                                         justifyContent: 'center',
                                         fontSize: '1rem'
                                       }}>
-                                        {task.assignedTo.name.charAt(0)}
+                                        {task.assignedTo && task.assignedTo.name ? task.assignedTo.name.charAt(0) : '?'}
                                       </div>
                                     </div>
                                     <div>
-                                      <p className="mb-0">{task.assignedTo.name}</p>
+                                      <p className="mb-0">{task.assignedTo?.name}</p>
                                     </div>
                                   </div>
                                   

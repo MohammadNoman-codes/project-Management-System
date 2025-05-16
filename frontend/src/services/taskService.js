@@ -83,6 +83,17 @@ const taskService = {
       console.error('Error in uploadTaskFile:', error);
       throw error;
     }
+  },
+  
+  updateTaskStatus: async (id, status) => {
+    try {
+      console.log(`Updating status for task ID: ${id} to ${status}`);
+      const response = await taskApi.updateStatus(id, { status });
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in updateTaskStatus:', error);
+      throw error;
+    }
   }
 };
 

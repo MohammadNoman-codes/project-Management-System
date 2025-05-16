@@ -11,3 +11,22 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.task-being-dragged {
+  opacity: 0.5 !important;
+  transform: scale(0.95);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.kanban-column-drag-over {
+  background-color: rgba(106, 76, 147, 0.05);
+  box-shadow: inset 0 0 8px rgba(106, 76, 147, 0.1);
+}
+
+.kanban-task:active {
+  cursor: grabbing;
+}
+
+.kanban-column {
+  transition: background-color 0.2s ease;
+}

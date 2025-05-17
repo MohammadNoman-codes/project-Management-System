@@ -112,6 +112,14 @@ function ReportingDashboard() {
   const [budgetVariance, setBudgetVariance] = useState({});
   const [budgetForecast, setBudgetForecast] = useState({});
 
+  // Add state for RisksTab data
+  const [riskSeverity, setRiskSeverity] = useState({});
+  const [riskCategories, setRiskCategories] = useState({});
+  const [riskTrends, setRiskTrends] = useState({});
+  const [riskExposure, setRiskExposure] = useState({});
+  const [topRisks, setTopRisks] = useState([]);
+  const [riskSummary, setRiskSummary] = useState({});
+
   // Load mock data
   useEffect(() => {
     const fetchAllData = async () => {
@@ -301,7 +309,56 @@ function ReportingDashboard() {
       
       fetchFinancialData();
     }
-  }, [activeTab, projectHealthData.length, financialSummary]);
+
+    // Add Risks data fetching
+    if (activeTab === 'risks' && topRisks.length === 0) {
+      const fetchRisksData = async () => {
+        setLoading(true);
+        try {
+          // Add console logs to debug the data fetching process
+          console.log("Fetching risk data...");
+          
+          const [
+            severityData,
+            categoriesData,
+            trendsData,
+            exposureData,
+            risksData,
+            summaryData
+          ] = await Promise.all([
+            analyticsService.getRiskSeverity(),
+            analyticsService.getRiskCategories(),
+            analyticsService.getRiskTrendsData(),
+            analyticsService.getRiskExposure(),
+            analyticsService.getTopRisks(),
+            analyticsService.getRiskSummary()
+          ]);
+          
+          // Log the received data to see what we're getting from the API
+          console.log("Risk severity data:", severityData);
+          console.log("Risk categories data:", categoriesData);
+          console.log("Risk trends data:", trendsData);
+          console.log("Risk exposure data:", exposureData);
+          console.log("Top risks data:", risksData);
+          console.log("Risk summary data from Reporting Dashbaord:", summaryData);
+          
+          setRiskSeverity(severityData || {});
+          setRiskCategories(categoriesData || {});
+          setRiskTrends(trendsData || {});
+          setRiskExposure(exposureData || {});
+          setTopRisks(risksData || []);
+          setRiskSummary(summaryData || {});
+          
+          setLoading(false);
+        } catch (error) {
+          console.error("Error fetching risks data:", error);
+          setLoading(false);
+        }
+      };
+      
+      fetchRisksData();
+    }
+  }, [activeTab, projectHealthData.length, financialSummary, topRisks.length]);
 
   // Derived chart data based on state - Rename variables that conflict with state
   const projectStatusChartData = {
@@ -905,11 +962,16 @@ function ReportingDashboard() {
             />}
             {activeTab === 'risks' && <RisksTab 
               chartColors={chartColors}
-              projects={projects}
-              risks={risks}
-              riskStatusData={riskStatusData}
-              riskData={riskData}
-              riskSeverityByProject={riskSeverityByProject}
+              projects={recentProjects} // Use the same project data from timeline
+              risks={topRisks}
+              riskSeverityData={{
+                labels: riskSeverity.labels || [],
+                counts: riskSeverity.counts || []
+              }}
+              riskCategoriesData={riskCategories.categories || []}
+              riskTrendsData={riskTrends}
+              riskExposureData={riskExposure.projectRiskExposure || []}
+              riskSummary={riskSummary}
               filter={filter}
               handleFilterChange={handleFilterChange}
             />}

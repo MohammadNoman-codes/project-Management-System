@@ -38,6 +38,11 @@ function RisksTab({
   chartColors, 
   projects, 
   risks = [], // Set default empty array to prevent null errors
+  riskSeverityData = { labels: [], counts: [] },
+  riskCategoriesData = [],
+  riskTrendsData = { labels: [], datasets: [] },
+  riskExposureData = [],
+  riskSummary = {},
   filter,
   handleFilterChange
 }) {
@@ -116,51 +121,41 @@ function RisksTab({
     ]
   };
 
-  // Risk severity distribution data with purple palette
-  const riskSeverityData = {
-    labels: ['Critical', 'High', 'Medium', 'Low', 'Very Low'],
+  // Risk severity distribution data with purple palette using API data
+  const severityChartData = {
+    // Use proper ternary condition - check both labels and counts
+    labels: riskSeverityData && riskSeverityData.labels && riskSeverityData.labels.length > 0 
+      ? riskSeverityData.labels 
+      : ['Critical', 'High', 'Medium', 'Low'],
     datasets: [
       {
-        data: risks.length > 0 ? [
-          risks.filter(r => r.severity === 'Critical').length || 0,
-          risks.filter(r => r.severity === 'High').length || 0,
-          risks.filter(r => r.severity === 'Medium').length || 0,
-          risks.filter(r => r.severity === 'Low').length || 0,
-          risks.filter(r => r.severity === 'Very Low').length || 0,
-        ] : [
-          dummyRiskData.severityDistribution.Critical,
-          dummyRiskData.severityDistribution.High,
-          dummyRiskData.severityDistribution.Medium,
-          dummyRiskData.severityDistribution.Low,
-          dummyRiskData.severityDistribution['Very Low']
-        ],
+        data: riskSeverityData && riskSeverityData.counts && riskSeverityData.counts.length > 0 
+          ? riskSeverityData.counts 
+          : [4, 8, 15, 6],
         backgroundColor: [
           colors.primary,
           colors.secondary,
           colors.tertiary,
           colors.quaternary,
-          colors.quinary,
         ],
-        borderColor: ['white', 'white', 'white', 'white', 'white'],
+        borderColor: ['white', 'white', 'white', 'white'],
         borderWidth: 2,
         hoverOffset: 10
       }
     ]
   };
 
-  // Risk by category data
-  const riskByCategoryData = {
-    labels: risks.length > 0 ? 
-      [...new Set(risks.map(r => r.category) || [])] : 
-      dummyRiskData.categories.map(c => c.name),
+  // Risk by category data from API
+  const categoryChartData = {
+    labels: riskCategoriesData && riskCategoriesData.length > 0 
+      ? riskCategoriesData.map(c => c.category) 
+      : ['Technical', 'Schedule', 'Resource', 'Scope', 'Budget'],
     datasets: [
       {
         label: 'Number of Risks',
-        data: risks.length > 0 ? 
-          [...new Set(risks.map(r => r.category) || [])].map(
-            category => risks.filter(r => r.category === category).length || 0
-          ) : 
-          dummyRiskData.categories.map(c => c.count),
+        data: riskCategoriesData && riskCategoriesData.length > 0 
+          ? riskCategoriesData.map(c => c.count) 
+          : [12, 8, 6, 5, 4],
         backgroundColor: colors.primary,
         borderColor: 'rgba(255, 255, 255, 0.5)',
         borderWidth: 1,
@@ -169,46 +164,76 @@ function RisksTab({
     ]
   };
 
-  // Risk trend over time with purple palette
-  const riskTrendData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    datasets: [
-      {
-        label: 'New Risks',
-        data: [5, 7, 4, 6, 8, 9, 7, 5, 6, 4, 7, 5],
-        fill: false,
-        borderColor: colors.primary,
-        tension: 0.3,
-        pointBackgroundColor: colors.primary,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      },
-      {
-        label: 'Closed Risks',
-        data: [2, 4, 3, 5, 6, 7, 5, 4, 5, 3, 6, 4],
-        fill: false,
-        borderColor: colors.completed,
-        tension: 0.3,
-        pointBackgroundColor: colors.completed,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      }
-    ]
+  // Risk trend over time with purple palette from API
+  const trendChartData = {
+    labels: riskTrendsData && riskTrendsData.labels 
+      ? riskTrendsData.labels 
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    datasets: riskTrendsData && riskTrendsData.datasets && riskTrendsData.datasets.length === 2 
+      ? [
+          {
+            ...riskTrendsData.datasets[0],
+            fill: false,
+            borderColor: colors.primary,
+            tension: 0.3,
+            pointBackgroundColor: colors.primary,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+          {
+            ...riskTrendsData.datasets[1],
+            fill: false,
+            borderColor: colors.completed,
+            tension: 0.3,
+            pointBackgroundColor: colors.completed,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          }
+        ] 
+      : [
+          {
+            label: 'New Risks',
+            data: [5, 7, 4, 6, 8, 9, 7, 5, 6, 4, 7, 5],
+            fill: false,
+            borderColor: colors.primary,
+            tension: 0.3,
+            pointBackgroundColor: colors.primary,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+          {
+            label: 'Closed Risks',
+            data: [2, 4, 3, 5, 6, 7, 5, 4, 5, 3, 6, 4],
+            fill: false,
+            borderColor: colors.completed,
+            tension: 0.3,
+            pointBackgroundColor: colors.completed,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          }
+        ]
   };
 
-  // Risk exposure by project with purple palette
-  const riskExposureData = {
-    labels: projects.map(p => p.title),
+  // Risk exposure by project with purple palette from API
+  const exposureChartData = {
+    labels: riskExposureData && riskExposureData.length > 0 
+      ? riskExposureData.map(p => p.title) 
+      : projects.map(p => p.title),
     datasets: [
       {
         label: 'Risk Score',
-        data: projects.map(() => Math.floor(Math.random() * 80) + 20),
-        backgroundColor: projects.map(() => {
-          const score = Math.floor(Math.random() * 80) + 20;
-          return score > 75 ? colors.primary : // high risk
-                score > 50 ? colors.secondary : // medium-high risk
-                score > 30 ? colors.tertiary : // medium risk
-                colors.quaternary; // low risk
+        data: riskExposureData && riskExposureData.length > 0
+          ? riskExposureData.map(p => Math.round(p.avg_risk_score || 0))
+          : projects.map(() => Math.floor(Math.random() * 80) + 20),
+        backgroundColor: (riskExposureData && riskExposureData.length > 0 ? riskExposureData : projects).map((p) => {
+          const score = riskExposureData && riskExposureData.length > 0
+            ? Math.round(p.avg_risk_score || 0)
+            : Math.floor(Math.random() * 80) + 20;
+          
+          return score > 75 ? colors.primary 
+                : score > 50 ? colors.secondary 
+                : score > 30 ? colors.tertiary 
+                : colors.quaternary;
         }),
         borderColor: 'rgba(255, 255, 255, 0.5)',
         borderWidth: 1,
@@ -229,22 +254,24 @@ function RisksTab({
     }
   };
 
-  // Calculate metrics with fallback to dummy data
-  const totalRisksCount = risks?.length || dummyRiskData.totalRisksCount;
-  const activeRisksCount = risks?.filter(r => r.status === 'Open' || r.status === 'In Progress').length || dummyRiskData.activeRisksCount;
-  const criticalRisksCount = risks?.filter(r => r.severity === 'Critical' && (r.status === 'Open' || r.status === 'In Progress')).length || dummyRiskData.criticalRisksCount;
-  const mitigatedRisksCount = risks?.filter(r => r.status === 'Mitigated' || r.status === 'Closed').length || dummyRiskData.mitigatedRisksCount;
+  // Calculate metrics from API data with fallback to dummy data
+  const totalRisksCount = riskSummary.totalRisks || dummyRiskData.totalRisksCount;
+  const activeRisksCount = riskSummary.activeRisks || dummyRiskData.activeRisksCount;
+  const criticalRisksCount = riskSummary.criticalRisks || dummyRiskData.criticalRisksCount;
+  const mitigatedRisksCount = riskSummary.mitigatedRisks || dummyRiskData.mitigatedRisksCount;
+  console.log('Risk Summary:', riskSummary);
 
   // Calculate percentages based on actual or dummy data
-  const mitigationRatePercent = risks?.length ? 
+  const mitigationRatePercent = totalRisksCount ? 
     Math.round((mitigatedRisksCount / totalRisksCount) * 100) : 
     Math.round((dummyRiskData.mitigatedRisksCount / dummyRiskData.totalRisksCount) * 100);
 
-  const activeRisksPercent = risks?.length ?
+  const activeRisksPercent = totalRisksCount ?
     Math.round((activeRisksCount / totalRisksCount) * 100) :
     Math.round((dummyRiskData.activeRisksCount / dummyRiskData.totalRisksCount) * 100);
 
   return (
+
     <div className="risks-analytics">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4 className="fw-bold">Risk Management Dashboard</h4>
@@ -377,7 +404,7 @@ function RisksTab({
             <div className="card-body">
               <div className="chart-container" style={{ height: '300px', position: 'relative' }}>
                 <Pie 
-                  data={riskSeverityData}
+                  data={severityChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -440,7 +467,7 @@ function RisksTab({
             <div className="card-body">
               <div className="chart-container" style={{ height: '300px', position: 'relative' }}>
                 <Bar 
-                  data={riskByCategoryData}
+                  data={categoryChartData}
                   options={{
                     indexAxis: 'y',
                     responsive: true,
@@ -498,7 +525,7 @@ function RisksTab({
             <div className="card-body">
               <div className="chart-container" style={{ height: '300px', position: 'relative' }}>
                 <Line 
-                  data={riskTrendData}
+                  data={trendChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,
@@ -559,7 +586,7 @@ function RisksTab({
             <div className="card-body">
               <div className="chart-container" style={{ height: '300px', position: 'relative' }}>
                 <Bar 
-                  data={riskExposureData}
+                  data={exposureChartData}
                   options={{
                     responsive: true,
                     maintainAspectRatio: false,

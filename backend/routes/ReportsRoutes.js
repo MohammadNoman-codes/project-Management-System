@@ -340,7 +340,7 @@ router.get('/milestone-status', async (req, res) => {
     } catch (error) {
         console.error('Error fetching milestone status data:', error);
         res.status(500).json({ 
-            message: 'Failed to fetch milestone status data', 
+            message: 'Failed to fetch milestone status', 
             error: error.message 
         });
     }
@@ -589,6 +589,252 @@ router.get('/budget-forecast', async (req, res) => {
         console.error('Error fetching budget forecast:', error);
         res.status(500).json({ 
             message: 'Failed to fetch budget forecast', 
+            error: error.message 
+        });
+    }
+});
+
+// GET risk severity distribution
+router.get('/risk-severity', async (req, res) => {
+    try {
+        const rows = await dbAll(`
+            SELECT 
+                CASE
+                    WHEN impact >= 4 OR risk_score >= 12 THEN 'Critical'
+                    WHEN impact = 3 OR risk_score >= 8 THEN 'High'
+                    WHEN impact = 2 OR risk_score >= 4 THEN 'Medium'
+                    ELSE 'Low'
+                END as severity,
+                COUNT(*) as count
+            FROM risks
+            GROUP BY severity
+            ORDER BY 
+                CASE severity
+                    WHEN 'Critical' THEN 1
+                    WHEN 'High' THEN 2
+                    WHEN 'Medium' THEN 3
+                    ELSE 4
+                END
+        `);
+        
+        res.json({
+            labels: rows.map(row => row.severity),
+            counts: rows.map(row => row.count)
+        });
+    } catch (error) {
+        console.error('Error fetching risk severity distribution:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch risk severity distribution', 
+            error: error.message 
+        });
+    }
+});
+
+// GET risk by category
+router.get('/risk-categories', async (req, res) => {
+    try {
+        const rows = await dbAll(`
+            SELECT 
+                category,
+                COUNT(*) as count
+            FROM risks
+            GROUP BY category
+            ORDER BY count DESC
+        `);
+        
+        res.json({
+            categories: rows
+        });
+    } catch (error) {
+        console.error('Error fetching risk categories:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch risk categories', 
+            error: error.message 
+        });
+    }
+});
+
+// GET risk trends
+router.get('/risk-trends', async (req, res) => {
+    try {
+        // Get new risks by month
+        const newRisks = await dbAll(`
+            SELECT 
+                strftime('%m', identified_date) as month,
+                strftime('%Y', identified_date) as year,
+                COUNT(*) as count
+            FROM risks
+            GROUP BY year, month
+            ORDER BY year, month
+            LIMIT 12
+        `);
+        
+        // Get closed risks by month
+        const closedRisks = await dbAll(`
+            SELECT 
+                strftime('%m', updated_at) as month,
+                strftime('%Y', updated_at) as year,
+                COUNT(*) as count
+            FROM risks
+            WHERE status = 'Resolved' OR status = 'Closed'
+            GROUP BY year, month
+            ORDER BY year, month
+            LIMIT 12
+        `);
+        
+        // Format month names
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        // Create an array of the last 12 months
+        const today = new Date();
+        const months = Array.from({length: 12}, (_, i) => {
+            const d = new Date(today);
+            d.setMonth(d.getMonth() - i);
+            return {
+                month: monthNames[d.getMonth()],
+                year: d.getFullYear().toString()
+            };
+        }).reverse();
+        
+        // Map the data to the months
+        const newRisksMap = {};
+        newRisks.forEach(row => {
+            const monthIndex = parseInt(row.month) - 1;
+            const key = `${monthNames[monthIndex]} ${row.year}`;
+            newRisksMap[key] = row.count;
+        });
+        
+        const closedRisksMap = {};
+        closedRisks.forEach(row => {
+            const monthIndex = parseInt(row.month) - 1;
+            const key = `${monthNames[monthIndex]} ${row.year}`;
+            closedRisksMap[key] = row.count;
+        });
+        
+        // Generate the final data structure
+        const labels = months.map(m => `${m.month} ${m.year}`);
+        const newRisksData = labels.map(label => newRisksMap[label] || 0);
+        const closedRisksData = labels.map(label => closedRisksMap[label] || 0);
+        
+        res.json({
+            labels,
+            datasets: [
+                {
+                    label: 'New Risks',
+                    data: newRisksData
+                },
+                {
+                    label: 'Closed Risks',
+                    data: closedRisksData
+                }
+            ]
+        });
+    } catch (error) {
+        console.error('Error fetching risk trends:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch risk trends', 
+            error: error.message 
+        });
+    }
+});
+
+// GET risk exposure by project
+router.get('/risk-exposure', async (req, res) => {
+    try {
+        const rows = await dbAll(`
+            SELECT 
+                p.id,
+                p.title,
+                COUNT(r.id) as risk_count,
+                AVG(r.risk_score) as avg_risk_score,
+                SUM(CASE WHEN r.impact >= 4 OR r.risk_score >= 12 THEN 1 ELSE 0 END) as critical_risks
+            FROM projects p
+            LEFT JOIN risks r ON p.id = r.project_id
+            GROUP BY p.id, p.title
+            ORDER BY avg_risk_score DESC
+        `);
+        
+        res.json({
+            projectRiskExposure: rows
+        });
+    } catch (error) {
+        console.error('Error fetching risk exposure by project:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch risk exposure by project', 
+            error: error.message 
+        });
+    }
+});
+
+// GET top risks
+router.get('/top-risks', async (req, res) => {
+    try {
+        const risks = await dbAll(`
+            SELECT 
+                r.id,
+                r.title,
+                r.project_id as projectId,
+                r.category,
+                CASE
+                    WHEN r.impact >= 4 OR r.risk_score >= 12 THEN 'Critical'
+                    WHEN r.impact = 3 OR r.risk_score >= 8 THEN 'High'
+                    WHEN r.impact = 2 OR r.risk_score >= 4 THEN 'Medium'
+                    ELSE 'Low'
+                END as severity,
+                r.status,
+                u.name as owner,
+                r.review_date as dueDate
+            FROM risks r
+            LEFT JOIN users u ON r.owner_id = u.id
+            ORDER BY 
+                CASE 
+                    WHEN r.impact >= 4 OR r.risk_score >= 12 THEN 1
+                    WHEN r.impact = 3 OR r.risk_score >= 8 THEN 2
+                    WHEN r.impact = 2 OR r.risk_score >= 4 THEN 3
+                    ELSE 4
+                END
+            LIMIT 10
+        `);
+        
+        res.json(risks);
+    } catch (error) {
+        console.error('Error fetching top risks:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch top risks', 
+            error: error.message 
+        });
+    }
+});
+
+// GET risk summary data
+router.get('/risk-summary', async (req, res) => {
+    try {
+        // Get total risks count
+        const totalRisksRow = await dbGet('SELECT COUNT(*) as count FROM risks');
+        const totalRisks = totalRisksRow.count || 0;
+        
+        // Get active risks count
+        const activeRisksRow = await dbGet("SELECT COUNT(*) as count FROM risks WHERE status != 'Resolved' AND status != 'Closed'");
+        const activeRisks = activeRisksRow.count || 0;
+        
+        // Get critical risks count
+        const criticalRisksRow = await dbGet("SELECT COUNT(*) as count FROM risks WHERE (impact >= 4 OR risk_score >= 12) AND status != 'Resolved' AND status != 'Closed'");
+        const criticalRisks = criticalRisksRow.count || 0;
+        
+        // Get mitigated risks count
+        const mitigatedRisksRow = await dbGet("SELECT COUNT(*) as count FROM risks WHERE status = 'Resolved' OR status = 'Closed'");
+        const mitigatedRisks = mitigatedRisksRow.count || 0;
+        
+        res.json({
+            totalRisks,
+            activeRisks,
+            criticalRisks,
+            mitigatedRisks
+        });
+    } catch (error) {
+        console.error('Error fetching risk summary:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch risk summary', 
             error: error.message 
         });
     }

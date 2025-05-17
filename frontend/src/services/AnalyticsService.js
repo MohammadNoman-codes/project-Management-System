@@ -238,6 +238,73 @@ class AnalyticsService {
     }
   }
 
+  // Risk Report API methods
+  async getRiskSeverity() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/risk-severity`);
+      console.log('Risk severity distribution data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching risk severity distribution:', error);
+      throw error;
+    }
+  }
+
+  async getRiskCategories() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/risk-categories`);
+      console.log('Risk categories data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching risk categories:', error);
+      throw error;
+    }
+  }
+
+  async getRiskTrendsData() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/risk-trends`);
+      console.log('Risk trends data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching risk trends data:', error);
+      throw error;
+    }
+  }
+
+  async getRiskExposure() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/risk-exposure`);
+      console.log('Risk exposure data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching risk exposure by project:', error);
+      throw error;
+    }
+  }
+
+  async getTopRisks() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/top-risks`);
+      console.log('Top risks data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching top risks:', error);
+      throw error;
+    }
+  }
+
+  async getRiskSummary() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/risk-summary`);
+      console.log('Risk summary data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching risk summary:', error);
+      throw error;
+    }
+  }
+
   // SIMULATED METHODS FOR FRONTEND DEMONSTRATION (without actual API)
   
   // Simulate project completion forecast using historical data

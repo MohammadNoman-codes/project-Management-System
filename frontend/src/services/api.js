@@ -144,7 +144,14 @@ export const reportApi = {
   getExpensesTrend: () => api.get('/reports/expenses-trend'),
   getExpensesByCategory: () => api.get('/reports/expenses-by-category'),
   getBudgetVariance: () => api.get('/reports/budget-variance'),
-  getBudgetForecast: () => api.get('/reports/budget-forecast')
+  getBudgetForecast: () => api.get('/reports/budget-forecast'),
+  // Add Risk endpoints
+  getRiskSeverity: () => api.get('/reports/risk-severity'),
+  getRiskCategories: () => api.get('/reports/risk-categories'),
+  getRiskTrends: () => api.get('/reports/risk-trends'),
+  getRiskExposure: () => api.get('/reports/risk-exposure'),
+  getTopRisks: () => api.get('/reports/top-risks'),
+  getRiskSummary: () => api.get('/reports/risk-summary')
 };
 
 export default {

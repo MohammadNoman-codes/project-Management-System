@@ -684,81 +684,6 @@ function ProjectsTab({
           <div className="dashboard-card">
             <div className="card-header d-flex justify-content-between align-items-center">
               <h5 className="dashboard-section-title mb-0">
-                <i className="bi bi-clock-history me-2"></i>Timeline Status
-              </h5>
-              <span className="badge" style={{ backgroundColor: colors.primary }}>
-                Progress vs. Elapsed Time
-              </span>
-            </div>
-            <div className="card-body">
-              <div className="chart-container" style={{ height: '280px', position: 'relative' }}>
-                <Bar 
-                  data={{
-                    ...projectTimelineData,
-                    datasets: projectTimelineData.datasets.map((dataset, index) => ({
-                      ...dataset,
-                      backgroundColor: index === 0 ? colors.tertiary : colors.quaternary
-                    }))
-                  }}
-                  options={{
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'top',
-                        align: 'end',
-                        labels: {
-                          boxWidth: 12,
-                          padding: 15,
-                          font: {
-                            size: 11
-                          }
-                        }
-                      },
-                      tooltip: {
-                        callbacks: {
-                          label: function(context) {
-                            return `${context.dataset.label}: ${context.parsed.x.toFixed(1)}%`;
-                          }
-                        }
-                      }
-                    },
-                    scales: {
-                      x: {
-                        min: 0,
-                        max: 100,
-                        grid: {
-                          color: `rgba(${safeHexToRgb(colors.quaternary)}, 0.1)`
-                        },
-                        ticks: {
-                          callback: value => `${value}%`,
-                          font: { size: 10 }
-                        }
-                      },
-                      y: {
-                        grid: {
-                          display: false
-                        },
-                        ticks: {
-                          font: { size: 10 }
-                        }
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Additional project charts and data */}
-      <div className="row g-4">
-        <div className="col-md-6 mb-4">
-          <div className="dashboard-card">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="dashboard-section-title mb-0">
                 <i className="bi bi-flag me-2"></i>Milestone Achievement
               </h5>
             </div>
@@ -802,7 +727,10 @@ function ProjectsTab({
             </div>
           </div>
         </div>
-        
+      </div>
+      
+      {/* Additional project charts and data */}
+      {/* <div className="row g-4">
         <div className="col-md-6 mb-4">
           <div className="dashboard-card">
             <div className="card-header d-flex justify-content-between align-items-center">
@@ -857,9 +785,9 @@ function ProjectsTab({
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
       
-      <div className="row mb-4">
+      {/* <div className="row mb-4">
         <div className="col-md-6">
           <div className="dashboard-card">
             <div className="card-header d-flex justify-content-between align-items-center">
@@ -978,10 +906,10 @@ function ProjectsTab({
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
       
       {/* Task Priority List */}
-      <div className="dashboard-card mb-4">
+      {/* <div className="dashboard-card mb-4">
         <div className="card-header">
           <h5 className="dashboard-section-title mb-0">
             <i className="bi bi-list-stars me-2"></i>High Priority Tasks
@@ -1044,7 +972,7 @@ function ProjectsTab({
             </table>
           </div>
         </div>
-      </div>
+      </div> */}
       
       {/* New components added below - after the existing "Task Priority List" table component */}
       

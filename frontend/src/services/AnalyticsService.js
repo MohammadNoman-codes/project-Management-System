@@ -81,6 +81,59 @@ class AnalyticsService {
     }
   }
 
+  // Report-specific API methods
+  async getReportKPIs() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/kpis`);
+      console.log('Report KPIs:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching report KPIs:', error);
+      throw error;
+    }
+  }
+
+  async getProjectTypes() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/project-types`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching project types:', error);
+      throw error;
+    }
+  }
+
+  async getTaskStatus() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/task-status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching task status:', error);
+      throw error;
+    }
+  }
+
+  async getProjectStatus() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/project-status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching project status:', error);
+      throw error;
+    }
+  }
+
+  async getProjectsTimeline() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/projects-timeline`);
+      console.log('Projects Timeline:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching projects timeline:', error);
+      throw error;
+    }
+  }
+
   // SIMULATED METHODS FOR FRONTEND DEMONSTRATION (without actual API)
   
   // Simulate project completion forecast using historical data

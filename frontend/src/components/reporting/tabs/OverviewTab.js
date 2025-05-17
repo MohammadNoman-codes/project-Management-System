@@ -8,7 +8,8 @@ function OverviewTab({
   statusDistribution, 
   kpis,
   monthlyProgressData,
-  projectPriorityDistribution
+  projectPriorityDistribution,
+  recentProjects = [] // Now we're receiving this as a prop
 }) {
   // Purple-themed color palette for charts to match Dashboard
   const chartColors = {
@@ -71,6 +72,73 @@ function OverviewTab({
     );
   }
 
+  // Format date for display (MM YYYY format)
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'Invalid Date';
+    }
+  };
+
+  // Calculate project duration in months
+  const getDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) return 'N/A';
+    
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // Calculate months between dates
+      const months = (end.getFullYear() - start.getFullYear()) * 12 + 
+                    (end.getMonth() - start.getMonth()) + 
+                    (end.getDate() >= start.getDate() ? 0 : -1);
+      
+      return months <= 0 ? '<1 month' : 
+             months === 1 ? '1 month' : 
+             `${months} months`;
+    } catch (error) {
+      console.error('Error calculating duration:', startDate, endDate, error);
+      return 'N/A';
+    }
+  };
+
+  // Determine the appropriate color and badge class based on status and completion
+  const getStatusStyle = (status, completion) => {
+    // Default to neutral style
+    let badgeClass = 'bg-secondary';
+    let barColor = chartColors.secondary;
+    
+    // Determine badge and color based on status and completion
+    if (status && status.toLowerCase() === 'completed') {
+      badgeClass = 'bg-primary';
+      barColor = chartColors.primary;
+    } else if (status && status.toLowerCase() === 'delayed') {
+      badgeClass = 'bg-danger';
+      barColor = chartColors.danger;
+    } else if (status && status.toLowerCase().includes('risk')) {
+      badgeClass = 'bg-warning text-dark';
+      barColor = chartColors.warning;
+    } else if (status && status.toLowerCase().includes('progress')) {
+      // Check if on track based on completion
+      if (completion > 60) {
+        badgeClass = 'bg-success';
+        barColor = chartColors.success;
+      } else {
+        badgeClass = 'bg-info';
+        barColor = chartColors.info;
+      }
+    } else if (status && status.toLowerCase() === 'not started') {
+      badgeClass = 'bg-light text-dark';
+      barColor = chartColors.light;
+    }
+    
+    return { badgeClass, barColor };
+  };
+
   return (
     <div className="dashboard">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -98,7 +166,7 @@ function OverviewTab({
             <div className="d-flex justify-content-between">
               <div>
                 <h6 className="kpi-title">Projects</h6>
-                <h2 className="kpi-value">{dashboardStats.totalProjects}</h2>
+                <h2 className="kpi-value">{dashboardStats.activeProjects}</h2>
               </div>
               <div className="kpi-icon" style={{ backgroundColor: `rgba(${hexToRgb(chartColors.primary)}, 0.1)` }}>
                 <i className="bi bi-folder fs-3" style={{ color: chartColors.primary }}></i>
@@ -526,7 +594,7 @@ function OverviewTab({
         </div>
       </div>
       
-      {/* Project Timeline */}
+      {/* Project Timeline - Updated to use dynamic data */}
       <div className="dashboard-card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h5 className="dashboard-section-title mb-0">
@@ -553,71 +621,36 @@ function OverviewTab({
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Hamad Twon Park (حديقة مدينة حمد)</td>
-                  <td>Feb 2024</td>
-                  <td>Apr 2024</td>
-                  <td>3 months</td>
-                  <td>
-                    <div className="progress progress-thin">
-                      <div className="progress-bar" style={{ width: '70%', backgroundColor: chartColors.success }}></div>
-                    </div>
-                    <small>70%</small>
-                  </td>
-                  <td><span className="badge bg-success me-1">On Track</span></td>
-                </tr>
-                <tr>
-                  <td>الحديقة البيئية- ECO WALK</td>
-                  <td>Mar 2024</td>
-                  <td>Aug 2024</td>
-                  <td>6 months</td>
-                  <td>
-                    <div className="progress progress-thin">
-                      <div className="progress-bar" style={{ width: '35%', backgroundColor: chartColors.warning }}></div>
-                    </div>
-                    <small>35%</small>
-                  </td>
-                  <td><span className="badge bg-warning text-dark me-1">At Risk</span></td>
-                </tr>
-                <tr>
-                  <td>Salman City Park (حديقة مدينة سلمان)</td>
-                  <td>Apr 2024</td>
-                  <td>Oct 2024</td>
-                  <td>7 months</td>
-                  <td>
-                    <div className="progress progress-thin">
-                      <div className="progress-bar" style={{ width: '15%', backgroundColor: chartColors.danger }}></div>
-                    </div>
-                    <small>15%</small>
-                  </td>
-                  <td><span className="badge bg-danger me-1">Delayed </span></td>
-                </tr>
-                <tr>
-                  <td>Sama Bay</td>
-                  <td>Jan 2024</td>
-                  <td>Mar 2024</td>
-                  <td>3 months</td>
-                  <td>
-                    <div className="progress progress-thin">
-                      <div className="progress-bar" style={{ width: '100%', backgroundColor: chartColors.primary }}></div>
-                    </div>
-                    <small>100%</small>
-                  </td>
-                  <td><span className="badge bg-primary" >Completed</span></td>
-                </tr>
-                <tr>
-                  <td>Exhibition World Bahrain</td>
-                  <td>May 2024</td>
-                  <td>Jul 2024</td>
-                  <td>3 months</td>
-                  <td>
-                    <div className="progress progress-thin">
-                      <div className="progress-bar" style={{ width: '10%', backgroundColor: chartColors.tertiary }}></div>
-                    </div>
-                    <small>10%</small>
-                  </td>
-                  <td><span className="badge" style={{ backgroundColor: chartColors.tertiary }}>New</span></td>
-                </tr>
+                {recentProjects && recentProjects.length > 0 ? (
+                  recentProjects.map(project => {
+                    const { badgeClass, barColor } = getStatusStyle(project.status, project.completion);
+                    return (
+                      <tr key={project.id}>
+                        <td>{project.title}</td>
+                        <td>{formatDate(project.start_date)}</td>
+                        <td>{formatDate(project.end_date)}</td>
+                        <td>{getDuration(project.start_date, project.end_date)}</td>
+                        <td>
+                          <div className="progress progress-thin">
+                            <div 
+                              className="progress-bar" 
+                              style={{ 
+                                width: `${project.completion || 0}%`, 
+                                backgroundColor: barColor 
+                              }}
+                            ></div>
+                          </div>
+                          <small>{project.completion || 0}%</small>
+                        </td>
+                        <td><span className={`badge ${badgeClass}`}>{project.status}</span></td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center">No projects found</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

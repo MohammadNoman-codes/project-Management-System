@@ -10,6 +10,8 @@ import { Chart as ChartJS,
   Tooltip, 
   Legend 
 } from 'chart.js';
+import analyticsService from '../../services/AnalyticsService.js';
+// import analyticsService from '../../services/AnalyticsService.js';
 
 // Register the required Chart.js components
 ChartJS.register(
@@ -89,6 +91,7 @@ function ReportingDashboard() {
   const [kpis, setKpis] = useState({});
   const [monthlyProgressData, setMonthlyProgressData] = useState({});
   const [projectPriorityDistribution, setProjectPriorityDistribution] = useState({});
+  const [recentProjects, setRecentProjects] = useState([]);
   
   const [financialData, setFinancialData] = useState({});
   const [projects, setProjects] = useState([]);
@@ -97,400 +100,91 @@ function ReportingDashboard() {
 
   // Load mock data
   useEffect(() => {
-    setLoading(true);
-    
-    // Simulate API call with timeout
-    setTimeout(() => {
-      // Mock projects data
-      const mockProjects = [
-        {
-          id: 1,
-          title: 'Project Management System',
-          status: 'Active',
-          completion: 45,
-          startDate: '2023-01-01',
-          endDate: '2023-12-31',
-          budget: 125000,
-          spent: 60000,
-          manager: 'Mohammad',
-          department: 'IT',
-          tasks: 32,
-          completedTasks: 15
-        },
-        {
-          id: 2,
-          title: 'Hamad Twon Park (حديقة مدينة حمد)',
-          status: 'Active',
-          completion: 25,
-          startDate: '2023-03-15',
-          endDate: '2024-06-30',
-          budget: 780000,
-          spent: 210000,
-          manager: 'Ali',
-          department: 'Infrastructure',
-          tasks: 48,
-          completedTasks: 12
-        },
-        {
-          id: 3,
-          title: 'Public Park Development',
-          status: 'Completed',
-          completion: 100,
-          startDate: '2022-05-10',
-          endDate: '2023-02-28',
-          budget: 450000,
-          spent: 438000,
-          manager: 'Ahmed',
-          department: 'Public Works',
-          tasks: 56,
-          completedTasks: 56
-        },
-        {
-          id: 4,
-          title: 'الحديقة البيئية- ECO WALK',
-          status: 'On Hold',
-          completion: 35,
-          startDate: '2022-08-15',
-          endDate: '2023-09-30',
-          budget: 320000,
-          spent: 112000,
-          manager: 'Abdullah',
-          department: 'Transportation',
-          tasks: 42,
-          completedTasks: 15
-        },
-        {
-          id: 5,
-          title: 'Salman City Park (حديقة مدينة سلمان)',
-          status: 'Active',
-          completion: 65,
-          startDate: '2023-02-01',
-          endDate: '2023-11-15',
-          budget: 280000,
-          spent: 182000,
-          manager: 'Mariam',
-          department: 'Culture',
-          tasks: 38,
-          completedTasks: 25
-        }
-      ];
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        // Fetch data for OverviewTab using the report endpoints
+        const [
+          kpiData, 
+          typeDistData, 
+          statusDistData, 
+          priorityDistData,
+          timelineData
+        ] = await Promise.all([
+          analyticsService.getReportKPIs(),
+          analyticsService.getProjectTypes(),
+          analyticsService.getTaskStatus(),
+          analyticsService.getProjectStatus(),
+          analyticsService.getProjectsTimeline() // This fetches the project timeline data
+        ]);
+        
+        console.log('Timeline data fetched:', timelineData); // Debug log to check the data format
 
-      // Mock resources data
-      const mockResources = [
-        {
-          id: 1,
-          name: 'Mohammad',
-          department: 'Development',
-          role: 'Senior Developer',
-          utilization: 85,
-          availability: 15,
-          allocatedProjects: 3,
-          skills: ['React', 'Node.js', 'MongoDB'],
-          projects: [
-            { name: 'Project Management System', allocation: 40 },
-            { name: 'City Library Modernization', allocation: 45 }
-          ],
-          billableHours: 34,
-          allocatedHours: 34,
-          capacity: 40
-        },
-        {
-          id: 2,
-          name: 'Ahmed',
-          department: 'Design',
-          role: 'UI/UX Designer',
-          utilization: 90,
-          availability: 10,
-          allocatedProjects: 2,
-          skills: ['UI Design', 'Figma', 'User Research'],
-          projects: [
-            { name: 'Project Management System', allocation: 50 },
-            { name: 'City Library Modernization', allocation: 40 }
-          ],
-          billableHours: 36,
-          allocatedHours: 36,
-          capacity: 40
-        },
-        {
-          id: 3,
-          name: 'Ali',
-          department: 'Development',
-          role: 'Backend Developer',
-          utilization: 75,
-          availability: 25,
-          allocatedProjects: 2,
-          skills: ['Java', 'Spring Boot', 'SQL'],
-          projects: [
-            { name: 'Project Management System', allocation: 35 },
-            { name: 'Hospital Renovation', allocation: 40 }
-          ],
-          billableHours: 30,
-          allocatedHours: 30,
-          capacity: 40
-        },
-        {
-          id: 4,
-          name: 'Abdulla',
-          department: 'QA',
-          role: 'Test Engineer',
-          utilization: 65,
-          availability: 35,
-          allocatedProjects: 3,
-          skills: ['QA Automation', 'Selenium', 'Cucumber'],
-          projects: [
-            { name: 'Project Management System', allocation: 25 },
-            { name: 'Hospital Renovation', allocation: 20 },
-            { name: 'City Library Modernization', allocation: 20 }
-          ],
-          billableHours: 26,
-          allocatedHours: 26,
-          capacity: 40
-        },
-        {
-          id: 5,
-          name: 'Mariam',
-          department: 'Development',
-          role: 'Frontend Developer',
-          utilization: 100,
-          availability: 0,
-          allocatedProjects: 1,
-          skills: ['React', 'TypeScript', 'SCSS'],
-          projects: [
-            { name: 'Road Safety Improvements', allocation: 100 }
-          ],
-          billableHours: 40,
-          allocatedHours: 40,
-          capacity: 40
-        },
-        {
-          id: 6,
-          name: 'Salman',
-          department: 'Project Management',
-          role: 'Project Manager',
-          utilization: 80,
-          availability: 20,
-          allocatedProjects: 2,
-          skills: ['PRINCE2', 'Agile', 'MS Project'],
-          projects: [
-            { name: 'Road Safety Improvements', allocation: 40 },
-            { name: 'Public Park Development', allocation: 40 }
-          ],
-          billableHours: 32,
-          allocatedHours: 32,
-          capacity: 40
-        },
-        {
-          id: 7,
-          name: 'Omar',
-          department: 'QA',
-          role: 'QA Lead',
-          utilization: 95,
-          availability: 5,
-          allocatedProjects: 4,
-          skills: ['Test Planning', 'Test Case Design', 'QA Processes'],
-          projects: [
-            { name: 'Project Management System', allocation: 25 },
-            { name: 'Hospital Renovation', allocation: 25 },
-            { name: 'Road Safety Improvements', allocation: 25 },
-            { name: 'City Library Modernization', allocation: 20 }
-          ],
-          billableHours: 38,
-          allocatedHours: 38,
-          capacity: 40
-        }
-      ];
+        // Set dashboardStats from kpiData
+        setDashboardStats(kpiData); 
 
-      // Mock risks data
-      const mockRisks = [
-        {
-          id: 1,
-          title: 'Budget overrun',
-          project: 'Project Management System',
-          projectId: 1,
-          severity: 'High',
-          probability: 'Medium',
-          impact: 'High',
-          status: 'Mitigating',
-          owner: 'Mohammad',
-          category: 'Financial',
-          dueDate: '2023-12-15'
-        },
-        {
-          id: 2,
-          title: 'Schedule delay',
-          project: 'Hospital Renovation',
-          projectId: 2,
-          severity: 'High',
-          probability: 'High',
-          impact: 'High',
-          status: 'Active',
-          owner: 'Ahmed',
-          category: 'Timeline',
-          dueDate: '2023-11-30'
-        },
-        {
-          id: 3,
-          title: 'Resource unavailability',
-          project: 'City Library Modernization',
-          projectId: 5,
-          severity: 'Medium',
-          probability: 'Medium',
-          impact: 'Medium',
-          status: 'Monitoring',
-          owner: 'Ali',
-          category: 'Resources',
-          dueDate: '2023-10-15'
-        },
-        {
-          id: 4,
-          title: 'Scope creep',
-          project: 'Road Safety Improvements',
-          projectId: 4,
-          severity: 'Medium',
-          probability: 'High',
-          impact: 'Medium',
-          status: 'Active',
-          owner: 'Abdulla',
-          category: 'Scope',
-          dueDate: '2023-09-20'
-        },
-        {
-          id: 5,
-          title: 'Technology compatibility issues',
-          project: 'Project Management System',
-          projectId: 1,
-          severity: 'Low',
-          probability: 'Medium',
-          impact: 'Low',
-          status: 'Resolved',
-          owner: 'Mariam',
-          category: 'Technical',
-          dueDate: '2023-08-30'
-        },
-        {
-          id: 6,
-          title: 'Contractor disputes',
-          project: 'Hospital Renovation',
-          projectId: 2,
-          severity: 'High',
-          probability: 'Medium',
-          impact: 'High',
-          status: 'Mitigating',
-          owner: 'Salman',
-          category: 'External',
-          dueDate: '2023-10-10'
-        },
-        {
-          id: 7,
-          title: 'Permit delays',
-          project: 'Public Park Development',
-          projectId: 3,
-          severity: 'Medium',
-          probability: 'Low',
-          impact: 'High',
-          status: 'Resolved',
-          owner: 'Omar',
-          category: 'Regulatory',
-          dueDate: '2023-01-15'
-        },
-        {
-          id: 8,
-          title: 'Safety incidents',
-          project: 'Road Safety Improvements',
-          projectId: 4,
-          severity: 'Critical',
-          probability: 'Low',
-          impact: 'Critical',
-          status: 'Monitoring',
-          owner: 'Mohammad',
-          category: 'Safety',
-          dueDate: '2023-11-05'
-        }
-      ];
+        // Project Type Distribution
+        setProjectTypeDistribution(
+          typeDistData.labels.reduce((acc, label, idx) => {
+            acc[label] = typeDistData.data[idx];
+            return acc;
+          }, {})
+        );
 
-      // Mock financial data
-      const mockFinancialData = {
-        totalBudget: 1955000,
-        totalSpent: 1002000,
-        totalCommitted: 350000,
-        totalRemaining: 603000,
-        expensesByMonth: [
-          { month: 'Jan', year: 2023, amount: 82000 },
-          { month: 'Feb', year: 2023, amount: 98000 },
-          { month: 'Mar', year: 2023, amount: 120000 },
-          { month: 'Apr', year: 2023, amount: 145000 },
-          { month: 'May', year: 2023, amount: 132000 },
-          { month: 'Jun', year: 2023, amount: 157000 },
-          { month: 'Jul', year: 2023, amount: 168000 },
-          { month: 'Aug', year: 2023, amount: 100000 },
-        ],
-        expensesByCategory: [
-          { category: 'Labor', amount: 580000 },
-          { category: 'Materials', amount: 230000 },
-          { category: 'Equipment', amount: 105000 },
-          { category: 'Services', amount: 72000 },
-          { category: 'Miscellaneous', amount: 15000 }
-        ],
-        projectBudgetVariance: [
-          { project: 'Project Management System', variance: -5 }, // Under budget
-          { project: 'Hospital Renovation', variance: 3 }, // Over budget
-          { project: 'Public Park Development', variance: -2.7 }, // Under budget
-          { project: 'Road Safety Improvements', variance: 0 }, // On budget
-          { project: 'City Library Modernization', variance: 0.3 } // Over budget
-        ],
-        forecastByQuarter: [
-          { quarter: 'Q1', year: 2023, forecast: 300000, actual: 300000 },
-          { quarter: 'Q2', year: 2023, forecast: 450000, actual: 434000 },
-          { quarter: 'Q3', year: 2023, forecast: 400000, actual: 268000 },
-          { quarter: 'Q4', year: 2023, forecast: 500000, actual: null },
-          { quarter: 'Q1', year: 2024, forecast: 305000, actual: null }
-        ]
-      };
-      
-      // Create department distribution data
-      const departments = {};
-      mockProjects.forEach(project => {
-        departments[project.department] = (departments[project.department] || 0) + 1;
-      });
-      
-      // Create status distribution data
-      const statuses = {};
-      mockProjects.forEach(project => {
-        statuses[project.status] = (statuses[project.status] || 0) + 1;
-      });
-      
-      // Update dashboard KPIs
-      const updatedKpis = {
-        schedulePerformanceIndex: 0.93,
-        costPerformanceIndex: 1.02,
-        resourceUtilization: mockResources.reduce((sum, r) => sum + r.utilization, 0) / mockResources.length,
-        budgetVariance: -2.1,
-        qualityIndex: 88
-      };
-      
-      // Update dashboard stats
-      const updatedStats = {
-        totalProjects: mockProjects.length,
-        activeProjectPercentage: (mockProjects.filter(p => p.status === 'Active').length / mockProjects.length) * 100,
-        totalTasks: mockProjects.reduce((sum, p) => sum + p.tasks, 0),
-        completedTaskPercentage: (mockProjects.reduce((sum, p) => sum + p.completedTasks, 0) / mockProjects.reduce((sum, p) => sum + p.tasks, 0)) * 100,
-        totalBudget: mockProjects.reduce((sum, p) => sum + p.budget, 0),
-        budgetUtilizationPercentage: (mockProjects.reduce((sum, p) => sum + p.spent, 0) / mockProjects.reduce((sum, p) => sum + p.budget, 0)) * 100,
-        totalRisks: mockRisks.length,
-        criticalRiskPercentage: (mockRisks.filter(r => r.severity === 'Critical').length / mockRisks.length) * 100
-      };
-      
-      setProjects(mockProjects);
-      setResources(mockResources);
-      setRisks(mockRisks);
-      setFinancialData(mockFinancialData);
-      setProjectTypeDistribution(departments);
-      setStatusDistribution(statuses);
-      setKpis(updatedKpis);
-      setDashboardStats(updatedStats);
-      setLoading(false);
-    }, 1000);
-  }, []);
+        // Status Distribution
+        setStatusDistribution(
+          statusDistData.labels.reduce((acc, label, idx) => {
+            acc[label] = statusDistData.data[idx];
+            return acc;
+          }, {})
+        );
+        
+        // Project Priority Distribution
+        setProjectPriorityDistribution(
+          priorityDistData.labels.reduce((acc, label, idx) => {
+            acc[label] = priorityDistData.data[idx];
+            return acc;
+          }, {})
+        );
+
+        // Set KPIs
+        setKpis({ 
+          schedulePerformanceIndex: kpiData.schedulePerformanceIndex || 1,
+          costPerformanceIndex: kpiData.costPerformanceIndex || 1,
+          resourceUtilization: kpiData.resourceUtilization || 80,
+          budgetVariance: kpiData.budgetVariance || 0,
+          qualityIndex: kpiData.qualityIndex || 90
+        });
+
+        // Set Monthly Progress Data (dummy for now, or fetch if available)
+        setMonthlyProgressData({
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+          datasets: [
+            { label: 'Planned Progress', data: [10, 20, 40, 60, 80, 100], borderColor: chartColors.primary, backgroundColor: 'transparent', borderWidth: 2, tension: 0.4 },
+            { label: 'Actual Progress', data: [8, 18, 35, 55, 75, 90], borderColor: chartColors.accent1, backgroundColor: 'transparent', borderWidth: 2, tension: 0.4 }
+          ]
+        });
+        
+        // Set Recent Projects for Timeline Summary
+        setRecentProjects(timelineData || []);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching reporting data:", error);
+        setLoading(false);
+        // Set default values in case of error
+        setDashboardStats(null);
+        setProjectTypeDistribution({});
+        setStatusDistribution({});
+        setKpis({ schedulePerformanceIndex: 0, costPerformanceIndex: 0, resourceUtilization: 0, budgetVariance: 0, qualityIndex: 0 });
+        setMonthlyProgressData({ labels: [], datasets: [] });
+        setProjectPriorityDistribution({});
+        setRecentProjects([]);
+      }
+    };
+
+    fetchAllData();
+  }, [filter]); // Re-fetch if filter changes
 
   // Derived chart data based on state
   const projectStatusData = {
@@ -975,6 +669,7 @@ function ReportingDashboard() {
               kpis={kpis}
               monthlyProgressData={updatedMonthlyProgressData}
               projectPriorityDistribution={projectPriorityDistribution}
+              recentProjects={recentProjects} // Explicitly passing the timeline data to OverviewTab
               projectStatusData={projectStatusData}
               taskCompletionData={taskCompletionData}
               budgetData={budgetData}

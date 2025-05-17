@@ -127,6 +127,15 @@ export const userApi = {
   delete: (id) => api.delete(`/users/${id}`)
 };
 
+// Reports API
+export const reportApi = {
+  getKPIs: () => api.get('/reports/kpis'),
+  getProjectTypes: () => api.get('/reports/project-types'),
+  getTaskStatus: () => api.get('/reports/task-status'),
+  getProjectStatus: () => api.get('/reports/project-status'),
+  getProjectsTimeline: () => api.get('/reports/projects-timeline')
+};
+
 export default {
   projectApi,
   taskApi,
@@ -136,5 +145,6 @@ export default {
   stakeholderApi,
   riskApi,
   analyticsApi,
-  userApi
+  userApi,
+  reportApi
 };

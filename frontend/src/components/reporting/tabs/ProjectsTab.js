@@ -11,6 +11,8 @@ function ProjectsTab({
   projectPhasesDetailedData,
   projectRiskExposureData,
   projectHealthData,
+  upcomingTasks = [], // Add default empty array
+  completedTasks = [], // Add default empty array
   filter,
   handleFilterChange
 }) {
@@ -104,7 +106,7 @@ function ProjectsTab({
   const [completedTasksProjectFilter, setCompletedTasksProjectFilter] = useState('all');
   
   // Sample upcoming tasks data
-  const upcomingTasks = [
+  const upcomingTasksDummyData = [
     {
       id: 1,
       name: "Financial Approval for Tender Award",
@@ -158,7 +160,7 @@ function ProjectsTab({
   ];
   
   // Sample recently completed tasks data
-  const completedTasks = [
+  const completedTasksDummyData = [
     {
       id: 101,
       name: "Preliminary Design Review",
@@ -255,6 +257,35 @@ function ProjectsTab({
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // If we have upcoming tasks data from API, use it. Otherwise, use the dummy data
+  // Make sure tasks have all required properties
+  const displayUpcomingTasks = upcomingTasks.length > 0 
+    ? upcomingTasks.map(task => ({
+        id: task.id || Math.random().toString(36).substr(2, 9),
+        name: task.name || 'Unnamed Task',
+        project: task.project || 'Unknown Project',
+        projectId: task.projectId || 0,
+        dueDate: task.dueDate || new Date().toISOString().split('T')[0],
+        priority: task.priority || 'Medium',
+        assignee: task.assignee || null,
+        status: task.status || 'To Do'
+      }))
+    : upcomingTasksDummyData;
+  
+  // If we have completed tasks data from API, use it. Otherwise, use the dummy data
+  // Make sure completed tasks have all required properties  
+  const displayCompletedTasks = completedTasks.length > 0 
+    ? completedTasks.map(task => ({
+        id: task.id || Math.random().toString(36).substr(2, 9),
+        name: task.name || 'Unnamed Task',
+        project: task.project || 'Unknown Project',
+        projectId: task.projectId || 0,
+        completedDate: task.completedDate || new Date().toISOString().split('T')[0],
+        completedBy: task.completedBy || null,
+        status: task.status || 'Completed'
+      }))
+    : completedTasksDummyData;
+
   return (
     <div className="projects-analytics">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -291,7 +322,7 @@ function ProjectsTab({
         </div>
       </div>
 
-      {/* Project Health Cards with modern styling */}
+      {/* Project Health Cards with data from API */}
       <div className="row g-4 mb-4">
         {projectHealthData
           .filter(p => filter.projectId === 'all' || parseInt(filter.projectId) === p.id)
@@ -1039,21 +1070,24 @@ function ProjectsTab({
                   }}
                 >
                   <option value="all">All Projects</option>
-                  {projects.map(project => (
-                    <option key={`upcoming-${project.id}`} value={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
+                  {Array.from(new Set(displayUpcomingTasks.map(task => task.projectId))).map(projectId => {
+                    const projectName = displayUpcomingTasks.find(task => task.projectId === projectId)?.project || 'Unknown';
+                    return (
+                      <option key={`upcoming-${projectId}`} value={projectId}>
+                        {projectName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
             <div className="card-body">
-              {upcomingTasks
+              {displayUpcomingTasks
                 .filter(task => upcomingTasksProjectFilter === 'all' || 
                                task.projectId.toString() === upcomingTasksProjectFilter.toString())
                 .length > 0 ? (
                 <div className="list-group">
-                  {upcomingTasks
+                  {displayUpcomingTasks
                     .filter(task => upcomingTasksProjectFilter === 'all' || 
                                   task.projectId.toString() === upcomingTasksProjectFilter.toString())
                     .map(task => {
@@ -1114,9 +1148,9 @@ function ProjectsTab({
                                 justifyContent: 'center',
                                 fontSize: '0.75rem'
                               }}>
-                                {task.assignee.charAt(0)}
+                                {task.assignee ? task.assignee.charAt(0) : '?'}
                               </div>
-                              <span className="small">{task.assignee}</span>
+                              <span className="small">{task.assignee || 'Unassigned'}</span>
                             </div>
                           </div>
                         </div>
@@ -1134,7 +1168,7 @@ function ProjectsTab({
         </div>
       </div>
       
-      {/* Recently Completed Tasks Component */}
+      {/* Recently Completed Tasks Component with data from API */}
       <div className="row mb-4">
         <div className="col-12">
           <div className="dashboard-card">
@@ -1156,21 +1190,24 @@ function ProjectsTab({
                   }}
                 >
                   <option value="all">All Projects</option>
-                  {projects.map(project => (
-                    <option key={`completed-${project.id}`} value={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
+                  {Array.from(new Set(displayCompletedTasks.map(task => task.projectId))).map(projectId => {
+                    const projectName = displayCompletedTasks.find(task => task.projectId === projectId)?.project || 'Unknown';
+                    return (
+                      <option key={`completed-${projectId}`} value={projectId}>
+                        {projectName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
             <div className="card-body">
-              {completedTasks
+              {displayCompletedTasks
                 .filter(task => completedTasksProjectFilter === 'all' || 
                                task.projectId.toString() === completedTasksProjectFilter.toString())
                 .length > 0 ? (
                 <div className="list-group">
-                  {completedTasks
+                  {displayCompletedTasks
                     .filter(task => completedTasksProjectFilter === 'all' || 
                                   task.projectId.toString() === completedTasksProjectFilter.toString())
                     .map(task => {
@@ -1223,7 +1260,7 @@ function ProjectsTab({
                                 justifyContent: 'center',
                                 fontSize: '0.75rem'
                               }}>
-                                {task.completedBy.charAt(0)}
+                                {task.completedBy ? task.completedBy.charAt(0) : '?'}
                               </div>
                               <span className="small">{task.completedBy}</span>
                             </div>

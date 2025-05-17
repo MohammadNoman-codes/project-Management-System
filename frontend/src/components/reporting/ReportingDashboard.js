@@ -98,6 +98,13 @@ function ReportingDashboard() {
   const [resources, setResources] = useState([]);
   const [risks, setRisks] = useState([]);
 
+  // Add state for ProjectsTab data
+  const [projectHealthData, setProjectHealthData] = useState([]);
+  const [projectTaskCompletionData, setProjectTaskCompletionData] = useState({});
+  const [milestonesData, setMilestonesData] = useState({});
+  const [upcomingTasks, setUpcomingTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
+  
   // Load mock data
   useEffect(() => {
     const fetchAllData = async () => {
@@ -120,7 +127,7 @@ function ReportingDashboard() {
         
         console.log('Timeline data fetched:', timelineData); // Debug log to check the data format
 
-        // Set dashboardStats from kpiData
+        // Set dashboard stats from kpiData
         setDashboardStats(kpiData); 
 
         // Project Type Distribution
@@ -167,6 +174,30 @@ function ReportingDashboard() {
         
         // Set Recent Projects for Timeline Summary
         setRecentProjects(timelineData || []);
+
+        // Only fetch ProjectsTab data when that tab is selected or is about to be selected
+        if (activeTab === 'projects' || activeTab === 'overview') {
+          // Fetch data for ProjectsTab
+          const [
+            projectHealth,
+            taskCompletionData, 
+            milestonesStatusData,
+            upcomingTasksData,
+            completedTasksData
+          ] = await Promise.all([
+            analyticsService.getProjectHealth(),
+            analyticsService.getTaskCompletion(),
+            analyticsService.getMilestoneStatus(),
+            analyticsService.getUpcomingTasks(),
+            analyticsService.getCompletedTasks()
+          ]);
+          
+          setProjectHealthData(projectHealth || []);
+          setProjectTaskCompletionData(taskCompletionData || { labels: [], datasets: [] });
+          setMilestonesData(milestonesStatusData || { labels: [], datasets: [] });
+          setUpcomingTasks(upcomingTasksData || []);
+          setCompletedTasks(completedTasksData || []);
+        }
         
         setLoading(false);
       } catch (error) {
@@ -180,14 +211,58 @@ function ReportingDashboard() {
         setMonthlyProgressData({ labels: [], datasets: [] });
         setProjectPriorityDistribution({});
         setRecentProjects([]);
+        
+        // Set default values for projects tab
+        setProjectHealthData([]);
+        setProjectTaskCompletionData({ labels: [], datasets: [] });
+        setMilestonesData({ labels: [], datasets: [] });
+        setUpcomingTasks([]);
+        setCompletedTasks([]);
       }
     };
 
     fetchAllData();
-  }, [filter]); // Re-fetch if filter changes
+  }, [filter, activeTab]); // Re-fetch if filter changes or active tab changes
 
-  // Derived chart data based on state
-  const projectStatusData = {
+  // When active tab changes, fetch data for the new tab if needed
+  useEffect(() => {
+    if (activeTab === 'projects' && projectHealthData.length === 0) {
+      const fetchProjectsData = async () => {
+        setLoading(true);
+        try {
+          const [
+            projectHealth,
+            taskCompletionData, 
+            milestonesStatusData,
+            upcomingTasksData,
+            completedTasksData
+          ] = await Promise.all([
+            analyticsService.getProjectHealth(),
+            analyticsService.getTaskCompletion(),
+            analyticsService.getMilestoneStatus(),
+            analyticsService.getUpcomingTasks(),
+            analyticsService.getCompletedTasks()
+          ]);
+          
+          setProjectHealthData(projectHealth || []);
+          setProjectTaskCompletionData(taskCompletionData || { labels: [], datasets: [] });
+          setMilestonesData(milestonesStatusData || { labels: [], datasets: [] });
+          setUpcomingTasks(upcomingTasksData || []);
+          setCompletedTasks(completedTasksData || []);
+          
+          setLoading(false);
+        } catch (error) {
+          console.error("Error fetching projects data:", error);
+          setLoading(false);
+        }
+      };
+      
+      fetchProjectsData();
+    }
+  }, [activeTab, projectHealthData.length]);
+
+  // Derived chart data based on state - Rename variables that conflict with state
+  const projectStatusChartData = {
     labels: ['Active', 'Completed', 'On Hold', 'Cancelled'],
     datasets: [
       {
@@ -210,7 +285,7 @@ function ReportingDashboard() {
   };
 
   // Task completion trend data
-  const taskCompletionData = {
+  const taskCompletionChartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
     datasets: [
       {
@@ -434,8 +509,8 @@ function ReportingDashboard() {
     ]
   };
 
-  // Project task completion data
-  const projectTaskCompletionData = {
+  // Project task completion data - RENAME to avoid conflict with state
+  const staticTaskCompletionData = {
     labels: projects.map(p => p.title),
     datasets: [
       {
@@ -452,7 +527,7 @@ function ReportingDashboard() {
   };
 
   // Project timeline data (progress vs elapsed time)
-  const projectTimelineData = {
+  const projectTimelineChartData = {
     labels: projects.map(p => p.title),
     datasets: [
       {
@@ -475,8 +550,8 @@ function ReportingDashboard() {
     ]
   };
 
-  // Milestone achievement data
-  const milestonesData = {
+  // Milestone achievement data - RENAME to avoid conflict with state
+  const staticMilestonesData = {
     labels: ['Not Started', 'In Progress', 'Completed', 'Delayed'],
     datasets: [
       {
@@ -543,8 +618,8 @@ function ReportingDashboard() {
     })
   };
 
-  // Project health data for cards
-  const projectHealthData = projects.map(project => {
+  // Project health data for cards - RENAME to avoid conflict with state
+  const staticProjectHealthData = projects.map(project => {
     // Calculate health metrics based on project data
     const timelineAdherence = Math.min(100, Math.max(60, 
       100 - Math.abs(project.completion - (project.completedTasks / project.tasks) * 100))
@@ -670,22 +745,29 @@ function ReportingDashboard() {
               monthlyProgressData={updatedMonthlyProgressData}
               projectPriorityDistribution={projectPriorityDistribution}
               recentProjects={recentProjects} // Explicitly passing the timeline data to OverviewTab
-              projectStatusData={projectStatusData}
-              taskCompletionData={taskCompletionData}
+              projectStatusData={projectStatusChartData}
+              taskCompletionData={taskCompletionChartData}
               budgetData={budgetData}
               resourceData={resourceData}
               projectCompletionStats={projectCompletionStats}
             />}
             {activeTab === 'projects' && <ProjectsTab 
-              projects={projects}
+              projects={recentProjects} // Use the same projects data from timeline
               chartColors={chartColors}
               hexToRgb={hexToRgb}
-              projectTaskCompletionData={projectTaskCompletionData}
-              projectTimelineData={projectTimelineData}
-              milestonesData={milestonesData}
+              // Use the API data with fallback to static data if empty
+              projectTaskCompletionData={projectTaskCompletionData.labels?.length > 0 ? 
+                                   projectTaskCompletionData : staticTaskCompletionData}
+              projectTimelineData={projectTimelineChartData}
+              milestonesData={milestonesData.labels?.length > 0 ? 
+                        milestonesData : staticMilestonesData}
               projectPhasesDetailedData={projectPhasesDetailedData}
               projectRiskExposureData={projectRiskExposureData}
-              projectHealthData={projectHealthData}
+              // Use API data with fallback to static data if empty
+              projectHealthData={projectHealthData.length > 0 ? 
+                           projectHealthData : staticProjectHealthData}
+              upcomingTasks={upcomingTasks}
+              completedTasks={completedTasks}
               filter={filter}
               handleFilterChange={handleFilterChange}
             />}

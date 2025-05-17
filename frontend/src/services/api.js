@@ -133,7 +133,12 @@ export const reportApi = {
   getProjectTypes: () => api.get('/reports/project-types'),
   getTaskStatus: () => api.get('/reports/task-status'),
   getProjectStatus: () => api.get('/reports/project-status'),
-  getProjectsTimeline: () => api.get('/reports/projects-timeline')
+  getProjectsTimeline: () => api.get('/reports/projects-timeline'),
+  getProjectHealth: () => api.get('/reports/project-health'),
+  getTaskCompletion: () => api.get('/reports/task-completion'),
+  getMilestoneStatus: () => api.get('/reports/milestone-status'),
+  getUpcomingTasks: () => api.get('/reports/upcoming-tasks'),
+  getCompletedTasks: () => api.get('/reports/completed-tasks')
 };
 
 export default {

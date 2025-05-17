@@ -134,6 +134,58 @@ class AnalyticsService {
     }
   }
 
+  // Additional Report API methods for Projects Tab
+  async getProjectHealth() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/project-health`);
+      console.log('Project health data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching project health data:', error);
+      throw error;
+    }
+  }
+
+  async getTaskCompletion() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/task-completion`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching task completion data:', error);
+      throw error;
+    }
+  }
+
+  async getMilestoneStatus() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/milestone-status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching milestone status data:', error);
+      throw error;
+    }
+  }
+
+  async getUpcomingTasks() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/upcoming-tasks`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching upcoming tasks:', error);
+      throw error;
+    }
+  }
+
+  async getCompletedTasks() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/completed-tasks`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching completed tasks:', error);
+      throw error;
+    }
+  }
+
   // SIMULATED METHODS FOR FRONTEND DEMONSTRATION (without actual API)
   
   // Simulate project completion forecast using historical data

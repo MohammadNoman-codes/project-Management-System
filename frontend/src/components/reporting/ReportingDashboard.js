@@ -105,6 +105,13 @@ function ReportingDashboard() {
   const [upcomingTasks, setUpcomingTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   
+  // Add state for FinancialTab data
+  const [financialSummary, setFinancialSummary] = useState({});
+  const [expensesTrend, setExpensesTrend] = useState({});
+  const [expensesByCategory, setExpensesByCategory] = useState({});
+  const [budgetVariance, setBudgetVariance] = useState({});
+  const [budgetForecast, setBudgetForecast] = useState({});
+
   // Load mock data
   useEffect(() => {
     const fetchAllData = async () => {
@@ -259,7 +266,42 @@ function ReportingDashboard() {
       
       fetchProjectsData();
     }
-  }, [activeTab, projectHealthData.length]);
+
+    // Add Financial data fetching
+    if (activeTab === 'financial' && Object.keys(financialSummary).length === 0) {
+      const fetchFinancialData = async () => {
+        setLoading(true);
+        try {
+          const [
+            summaryData,
+            expensesTrendData,
+            expensesByCategoryData,
+            budgetVarianceData,
+            budgetForecastData
+          ] = await Promise.all([
+            analyticsService.getFinancialSummary(),
+            analyticsService.getExpensesTrend(),
+            analyticsService.getExpensesByCategory(),
+            analyticsService.getBudgetVariance(),
+            analyticsService.getBudgetForecast()
+          ]);
+          
+          setFinancialSummary(summaryData || {});
+          setExpensesTrend(expensesTrendData || {});
+          setExpensesByCategory(expensesByCategoryData || {});
+          setBudgetVariance(budgetVarianceData || {});
+          setBudgetForecast(budgetForecastData || {});
+          
+          setLoading(false);
+        } catch (error) {
+          console.error("Error fetching financial data:", error);
+          setLoading(false);
+        }
+      };
+      
+      fetchFinancialData();
+    }
+  }, [activeTab, projectHealthData.length, financialSummary]);
 
   // Derived chart data based on state - Rename variables that conflict with state
   const projectStatusChartData = {
@@ -849,10 +891,15 @@ function ReportingDashboard() {
             />}
             {activeTab === 'financial' && <FinancialTab 
               chartColors={chartColors}
-              projects={projects}
-              financialData={financialData}
-              expensesByCategoryData={expensesByCategoryData}
-              monthlyExpensesData={monthlyExpensesData}
+              projects={recentProjects} // Use the same project data from timeline
+              financialData={{
+                // Combine all financial data into one object
+                ...financialSummary,
+                ...expensesTrend,
+                ...expensesByCategory,
+                ...budgetVariance,
+                ...budgetForecast
+              }}
               filter={filter}
               handleFilterChange={handleFilterChange}
             />}

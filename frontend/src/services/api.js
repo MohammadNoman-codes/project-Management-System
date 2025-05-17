@@ -138,7 +138,13 @@ export const reportApi = {
   getTaskCompletion: () => api.get('/reports/task-completion'),
   getMilestoneStatus: () => api.get('/reports/milestone-status'),
   getUpcomingTasks: () => api.get('/reports/upcoming-tasks'),
-  getCompletedTasks: () => api.get('/reports/completed-tasks')
+  getCompletedTasks: () => api.get('/reports/completed-tasks'),
+  // Add Financial endpoints
+  getFinancialSummary: () => api.get('/reports/financial-summary'),
+  getExpensesTrend: () => api.get('/reports/expenses-trend'),
+  getExpensesByCategory: () => api.get('/reports/expenses-by-category'),
+  getBudgetVariance: () => api.get('/reports/budget-variance'),
+  getBudgetForecast: () => api.get('/reports/budget-forecast')
 };
 
 export default {

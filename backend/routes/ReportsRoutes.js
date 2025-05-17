@@ -410,4 +410,188 @@ router.get('/completed-tasks', async (req, res) => {
     }
 });
 
+// GET financial summary data
+router.get('/financial-summary', async (req, res) => {
+    try {
+        // Get total budget from all projects
+        const budgetRow = await dbGet('SELECT SUM(budget_estimated) as total FROM projects');
+        const totalBudget = budgetRow.total || 0;
+        
+        // Get total spent from expenses
+        const spentRow = await dbGet('SELECT SUM(amount) as total FROM expenses WHERE status = "Approved"');
+        const totalSpent = spentRow.total || 0;
+        
+        // Get committed funds (pending expenses)
+        const committedRow = await dbGet('SELECT SUM(amount) as total FROM expenses WHERE status = "Pending"');
+        const totalCommitted = committedRow.total || 0;
+        
+        // Calculate remaining budget
+        const totalRemaining = totalBudget - totalSpent - totalCommitted;
+        
+        // Return financial summary data
+        res.json({
+            totalBudget,
+            totalSpent,
+            totalCommitted,
+            totalRemaining,
+            budgetUtilizationPercentage: totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+        });
+    } catch (error) {
+        console.error('Error fetching financial summary:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch financial summary', 
+            error: error.message 
+        });
+    }
+});
+
+// GET expenses trend data (monthly)
+router.get('/expenses-trend', async (req, res) => {
+    try {
+        const expenses = await dbAll(`
+            SELECT 
+                strftime('%m', date) as month,
+                strftime('%Y', date) as year,
+                SUM(amount) as amount
+            FROM expenses
+            WHERE status = 'Approved'
+            GROUP BY year, month
+            ORDER BY year, month
+            LIMIT 12
+        `);
+        
+        // Format month names
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const expensesByMonth = expenses.map(row => ({
+            month: monthNames[parseInt(row.month) - 1],
+            year: row.year,
+            amount: row.amount
+        }));
+        
+        res.json({
+            expensesByMonth
+        });
+    } catch (error) {
+        console.error('Error fetching expenses trend:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch expenses trend', 
+            error: error.message 
+        });
+    }
+});
+
+// GET expenses by category
+router.get('/expenses-by-category', async (req, res) => {
+    try {
+        const categories = await dbAll(`
+            SELECT 
+                category,
+                SUM(amount) as amount
+            FROM expenses
+            WHERE status = 'Approved'
+            GROUP BY category
+            ORDER BY amount DESC
+        `);
+        
+        res.json({
+            expensesByCategory: categories
+        });
+    } catch (error) {
+        console.error('Error fetching expenses by category:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch expenses by category', 
+            error: error.message 
+        });
+    }
+});
+
+// GET budget variance by project
+router.get('/budget-variance', async (req, res) => {
+    try {
+        const projects = await dbAll(`
+            SELECT 
+                p.id,
+                p.title as project,
+                p.budget_estimated as budget,
+                p.budget_actual as spent,
+                (p.budget_actual - p.budget_estimated) / p.budget_estimated * 100 as variance
+            FROM projects p
+            WHERE p.budget_estimated > 0
+            ORDER BY variance DESC
+        `);
+        
+        res.json({
+            projectBudgetVariance: projects
+        });
+    } catch (error) {
+        console.error('Error fetching budget variance:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch budget variance', 
+            error: error.message 
+        });
+    }
+});
+
+// GET budget forecast data (quarterly)
+router.get('/budget-forecast', async (req, res) => {
+    try {
+        // This would typically come from a more complex forecasting algorithm
+        // For now, we'll create some sample data based on historical expenses
+        
+        const currentYear = new Date().getFullYear();
+        const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+        
+        // Get actual quarterly expenses for the year
+        const actualExpenses = await dbAll(`
+            SELECT 
+                CASE
+                    WHEN strftime('%m', date) BETWEEN '01' AND '03' THEN 'Q1'
+                    WHEN strftime('%m', date) BETWEEN '04' AND '06' THEN 'Q2'
+                    WHEN strftime('%m', date) BETWEEN '07' AND '09' THEN 'Q3'
+                    ELSE 'Q4'
+                END as quarter,
+                strftime('%Y', date) as year,
+                SUM(amount) as amount
+            FROM expenses
+            WHERE status = 'Approved'
+            AND strftime('%Y', date) = ?
+            GROUP BY quarter, year
+            ORDER BY year, quarter
+        `, [currentYear.toString()]);
+        
+        // Create a map of actual expenses by quarter
+        const actualByQuarter = {};
+        actualExpenses.forEach(row => {
+            actualByQuarter[row.quarter] = row.amount;
+        });
+        
+        // Generate forecast data with some variation from actual
+        const forecastData = quarters.map(quarter => {
+            const actual = actualByQuarter[quarter] || 0;
+            // Forecast is actual plus 10-20% for future quarters
+            const forecast = quarter > quarters[new Date().getMonth() / 3 | 0] 
+                ? actual * (1 + (Math.random() * 0.1 + 0.1)) 
+                : actual;
+            
+            return {
+                quarter,
+                year: currentYear,
+                forecast: Math.round(forecast),
+                actual
+            };
+        });
+        
+        res.json({
+            forecastByQuarter: forecastData
+        });
+    } catch (error) {
+        console.error('Error fetching budget forecast:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch budget forecast', 
+            error: error.message 
+        });
+    }
+});
+
 module.exports = router;

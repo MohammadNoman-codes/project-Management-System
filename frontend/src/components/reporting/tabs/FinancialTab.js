@@ -54,12 +54,24 @@ function FinancialTab({
     }
   };
 
+  // Safe formatting function for numbers
+  const formatCurrency = (value) => {
+    if (value === undefined || value === null) return "BHD 0";
+    return "BHD " + (typeof value === 'number' ? value.toLocaleString() : '0');
+  };
+
+  // Safe percentage formatter
+  const formatPercentage = (value) => {
+    if (value === undefined || value === null) return "0%";
+    return (typeof value === 'number' ? value.toFixed(1) : '0') + "%";
+  };
+
   const expensesTrendData = {
-    labels: financialData.expensesByMonth?.map(item => `${item.month} ${item.year}`),
+    labels: financialData.expensesByMonth?.map(item => `${item.month} ${item.year}`) || [],
     datasets: [
       {
         label: 'Monthly Expenses',
-        data: financialData.expensesByMonth?.map(item => item.amount),
+        data: financialData.expensesByMonth?.map(item => item.amount) || [],
         fill: true,
         backgroundColor: `rgba(${safeHexToRgb(colors.primary)}, 0.2)`,
         borderColor: colors.primary,
@@ -72,10 +84,10 @@ function FinancialTab({
   };
 
   const expensesByCategoryData = {
-    labels: financialData.expensesByCategory?.map(item => item.category),
+    labels: financialData.expensesByCategory?.map(item => item.category) || [],
     datasets: [
       {
-        data: financialData.expensesByCategory?.map(item => item.amount),
+        data: financialData.expensesByCategory?.map(item => item.amount) || [],
         backgroundColor: [
           colors.primary,
           colors.secondary,
@@ -92,17 +104,17 @@ function FinancialTab({
   };
 
   const budgetVarianceData = {
-    labels: financialData.projectBudgetVariance?.map(item => item.project),
+    labels: financialData.projectBudgetVariance?.map(item => item.project) || [],
     datasets: [
       {
         label: 'Budget Variance (%)',
-        data: financialData.projectBudgetVariance?.map(item => item.variance),
+        data: financialData.projectBudgetVariance?.map(item => item.variance) || [],
         backgroundColor: financialData.projectBudgetVariance?.map(item => 
           item.variance < -5 ? colors.completed : 
           item.variance < 0 ? colors.tertiary :
           item.variance < 5 ? colors.quaternary : 
           colors.accent2
-        ),
+        ) || [],
         borderColor: 'rgba(255, 255, 255, 0.5)',
         borderWidth: 1,
         barPercentage: 0.7
@@ -111,11 +123,11 @@ function FinancialTab({
   };
 
   const forecastVsActualData = {
-    labels: financialData.forecastByQuarter?.map(item => `${item.quarter} ${item.year}`),
+    labels: financialData.forecastByQuarter?.map(item => `${item.quarter} ${item.year}`) || [],
     datasets: [
       {
         label: 'Forecast',
-        data: financialData.forecastByQuarter?.map(item => item.forecast),
+        data: financialData.forecastByQuarter?.map(item => item.forecast) || [],
         fill: false,
         borderColor: colors.primary,
         tension: 0.3,
@@ -125,7 +137,7 @@ function FinancialTab({
       },
       {
         label: 'Actual',
-        data: financialData.forecastByQuarter?.map(item => item.actual),
+        data: financialData.forecastByQuarter?.map(item => item.actual) || [],
         fill: false,
         borderColor: colors.completed,
         tension: 0.3,
@@ -170,7 +182,7 @@ function FinancialTab({
             name="projectId" 
             onChange={handleFilterChange}
             value={filter.projectId}
-            style={{ width: '200px' }}
+            style={{ minWidth: '200px' }}
           >
             <option value="all">All Projects</option>
             {projects.map(project => (
@@ -200,7 +212,7 @@ function FinancialTab({
             <div className="d-flex justify-content-between">
               <div>
                 <h6 className="kpi-title">Total Budget</h6>
-                <h2 className="kpi-value">BHD {financialData.totalBudget?.toLocaleString()}</h2>
+                <h2 className="kpi-value">{formatCurrency(financialData.totalBudget)}</h2>
               </div>
               <div className="kpi-icon" style={{ backgroundColor: `rgba(${safeHexToRgb(colors.primary)}, 0.1)` }}>
                 <i className="bi bi-cash-coin fs-3" style={{ color: colors.primary }}></i>
@@ -217,14 +229,14 @@ function FinancialTab({
             <div className="d-flex justify-content-between">
               <div>
                 <h6 className="kpi-title">Budget Spent</h6>
-                <h2 className="kpi-value">BHD {financialData.totalSpent?.toLocaleString()}</h2>
+                <h2 className="kpi-value">{formatCurrency(financialData.totalSpent)}</h2>
               </div>
               <div className="kpi-icon" style={{ backgroundColor: `rgba(${safeHexToRgb(colors.accent2)}, 0.1)` }}>
                 <i className="bi bi-credit-card fs-3" style={{ color: colors.accent2 }}></i>
               </div>
             </div>
             <p className="text-muted mt-2 mb-0 small">
-              {Math.round((financialData.totalSpent / financialData.totalBudget) * 100)}% of total budget spent
+              {formatPercentage(financialData.budgetUtilizationPercentage)} of total budget spent
             </p>
             <div className="progress progress-thin mt-3">
               <div className="progress-bar" style={{ 
@@ -239,14 +251,14 @@ function FinancialTab({
             <div className="d-flex justify-content-between">
               <div>
                 <h6 className="kpi-title">Budget Remaining</h6>
-                <h2 className="kpi-value">BHD {financialData.totalRemaining?.toLocaleString()}</h2>
+                <h2 className="kpi-value">{formatCurrency(financialData.totalRemaining)}</h2>
               </div>
               <div className="kpi-icon" style={{ backgroundColor: `rgba(${safeHexToRgb(colors.quaternary)}, 0.1)` }}>
                 <i className="bi bi-piggy-bank fs-3" style={{ color: colors.quaternary }}></i>
               </div>
             </div>
             <p className="text-muted mt-2 mb-0 small">
-              {Math.round((financialData.totalRemaining / financialData.totalBudget) * 100)}% of total budget remaining
+              {formatPercentage(financialData.totalRemaining / (financialData.totalBudget || 1) * 100)} of total budget remaining
             </p>
             <div className="progress progress-thin mt-3">
               <div className="progress-bar" style={{ 
@@ -261,14 +273,14 @@ function FinancialTab({
             <div className="d-flex justify-content-between">
               <div>
                 <h6 className="kpi-title">Committed Funds</h6>
-                <h2 className="kpi-value">BHD {financialData.totalCommitted?.toLocaleString()}</h2>
+                <h2 className="kpi-value">{formatCurrency(financialData.totalCommitted)}</h2>
               </div>
               <div className="kpi-icon" style={{ backgroundColor: `rgba(${safeHexToRgb(colors.tertiary)}, 0.1)` }}>
                 <i className="bi bi-file-earmark-text fs-3" style={{ color: colors.tertiary }}></i>
               </div>
             </div>
             <p className="text-muted mt-2 mb-0 small">
-              {Math.round((financialData.totalCommitted / financialData.totalBudget) * 100)}% committed in pending contracts
+              {formatPercentage(financialData.totalCommitted / (financialData.totalBudget || 1) * 100)} of total budget
             </p>
             <div className="progress progress-thin mt-3">
               <div className="progress-bar" style={{ 
@@ -289,7 +301,7 @@ function FinancialTab({
                 <i className="bi bi-graph-up-arrow me-2"></i>Monthly Expense Trend
               </h5>
               <span className="badge" style={{ backgroundColor: colors.primary }}>
-                Year-to-Date Total: BHD {financialData.expensesByMonth?.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                Year-to-Date Total: {formatCurrency(financialData.expensesByMonth?.reduce((sum, item) => sum + item.amount, 0))}
               </span>
             </div>
             <div className="card-body">
@@ -380,15 +392,15 @@ function FinancialTab({
                 <div className="d-flex justify-content-center flex-wrap small">
                   <div className="mx-2">
                     <span className="d-inline-block me-1" style={{ width: '12px', height: '12px', backgroundColor: colors.accent2, borderRadius: '2px' }}></span>
-                    Spent: BHD {financialData.totalSpent?.toLocaleString()}
+                    Spent: {formatCurrency(financialData.totalSpent)}
                   </div>
                   <div className="mx-2">
                     <span className="d-inline-block me-1" style={{ width: '12px', height: '12px', backgroundColor: colors.tertiary, borderRadius: '2px' }}></span>
-                    Committed: BHD {financialData.totalCommitted?.toLocaleString()}
+                    Committed: {formatCurrency(financialData.totalCommitted)}
                   </div>
                   <div className="mx-2">
                     <span className="d-inline-block me-1" style={{ width: '12px', height: '12px', backgroundColor: colors.quaternary, borderRadius: '2px' }}></span>
-                    Remaining: BHD {financialData.totalRemaining?.toLocaleString()}
+                    Remaining: {formatCurrency(financialData.totalRemaining)}
                   </div>
                 </div>
               </div>
@@ -590,10 +602,10 @@ function FinancialTab({
                       .map(project => (
                         <tr key={project.id}>
                           <td>{project.title}</td>
-                          <td>BHD {project.budget.toLocaleString()}</td>
-                          <td>BHD {project.spent.toLocaleString()}</td>
-                          <td>BHD {Math.round(project.budget * 0.15).toLocaleString()}</td>
-                          <td>BHD {(project.budget - project.spent).toLocaleString()}</td>
+                          <td>{formatCurrency(project.budget)}</td>
+                          <td>{formatCurrency(project.spent)}</td>
+                          <td>{formatCurrency(Math.round(project.budget * 0.15))}</td>
+                          <td>{formatCurrency((project.budget - project.spent))}</td>
                           <td>
                             <span className={
                               ((project.spent / project.budget) - 1) * 100 > 5 ? 'text-danger' :

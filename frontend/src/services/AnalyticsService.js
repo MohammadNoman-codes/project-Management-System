@@ -186,6 +186,58 @@ class AnalyticsService {
     }
   }
 
+  // Financial Report API methods
+  async getFinancialSummary() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/financial-summary`);
+      console.log('Financial summary data:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching financial summary:', error);
+      throw error;
+    }
+  }
+
+  async getExpensesTrend() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/expenses-trend`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching expenses trend:', error);
+      throw error;
+    }
+  }
+
+  async getExpensesByCategory() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/expenses-by-category`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching expenses by category:', error);
+      throw error;
+    }
+  }
+
+  async getBudgetVariance() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/budget-variance`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching budget variance:', error);
+      throw error;
+    }
+  }
+
+  async getBudgetForecast() {
+    try {
+      const response = await axios.get(`${API_URL}/reports/budget-forecast`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching budget forecast:', error);
+      throw error;
+    }
+  }
+
   // SIMULATED METHODS FOR FRONTEND DEMONSTRATION (without actual API)
   
   // Simulate project completion forecast using historical data

@@ -809,14 +809,14 @@ function ReportingDashboard() {
                 <i className="bi bi-kanban me-1"></i> Projects
               </button>
             </li>
-            <li className="nav-item">
+            {/* <li className="nav-item">
               <button 
                 className={`nav-link ${activeTab === 'resources' ? 'active' : ''}`}
                 onClick={() => setActiveTab('resources')}
               >
                 <i className="bi bi-person me-1"></i> Resources
               </button>
-            </li>
+            </li> */}
             <li className="nav-item">
               <button 
                 className={`nav-link ${activeTab === 'financial' ? 'active' : ''}`}

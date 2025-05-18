@@ -57,7 +57,9 @@ export const taskApi = {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  })
+  }),
+  // Add the updateStatus method to match the backend endpoint
+  updateStatus: (id, statusData) => api.patch(`/tasks/${id}/status`, statusData)
 };
 
 // Resources API

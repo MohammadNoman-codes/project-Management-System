@@ -396,7 +396,7 @@ function ProjectPage() {
     );
     
     try {
-      // Use the new dedicated status update method instead of the full update
+      // Use the dedicated status update method
       await taskService.updateTaskStatus(taskId, targetColumnName);
       
       // Update the task status to reflect the change

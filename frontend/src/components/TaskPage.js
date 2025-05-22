@@ -251,10 +251,10 @@ function TaskPage() {
       
       // For consistency across the app, ensure IDs are strings
       let updatedTask;
-      
+      console.log('the ID', taskId);
       if (taskModalMode === 'create') {
         // Add project_id for new tasks
-        taskData.project_id = id;
+        taskData.project_id = taskId;
         
         // Create new task
         updatedTask = await taskService.createTask(taskData);

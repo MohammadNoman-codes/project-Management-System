@@ -102,11 +102,11 @@ function TaskPage() {
         
         let projectData;
         // If no project ID from params but URL is in format /tasks/[id]
-        if (id) {
+        if (taskId) {
           try {
-            console.log(`Fetching project details for ID: ${id}`);
+            console.log(`Fetching project details for ID: ${taskId}`);
             // Get comprehensive project details with milestones and team
-            const projectDetails = await projectService.getProjectWithDetails(id);
+            const projectDetails = await projectService.getProjectWithDetails(taskId);
             console.log('Project details received:', projectDetails);
             setProject(projectDetails);
             setMilestones(projectDetails.milestones || []);
@@ -119,9 +119,9 @@ function TaskPage() {
         
         // Get tasks
         try {
-          console.log(`Fetching tasks for project ID: ${id}`);
+          console.log(`Fetching tasks for project ID: ${taskId}`);
           // Use taskService instead of direct fetch
-          const tasksData = await taskService.getAllTasks(id);
+          const tasksData = await taskService.getAllTasks(taskId);
           console.log('Tasks data received:', tasksData);
           
           if (!Array.isArray(tasksData)) {
